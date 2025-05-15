@@ -41,7 +41,8 @@ export class App {
 			cors({
 				origin: [
 					'http://localhost:3000',
-					'https://fitness-web-frontend.vercel.app'
+					'https://fitness-web-frontend.vercel.app',
+					'https://fitness-web-frontend-bjly2jxps-viacheslavols-projects.vercel.app'
 				  ],
 				credentials: true,
 			    methods: ['GET','POST','PUT','DELETE','OPTIONS'],
