@@ -36,8 +36,7 @@ export class App {
 		@inject(TYPES.TelegramController) private telegramController: TelegramController,
 	) {
 		this.app = express();
-		this.app.use(cookieParser());
-		this.app.use(express.json());
+
 		this.app.use(
 			cors({
 				origin: [
@@ -49,6 +48,9 @@ export class App {
 				allowedHeaders: ['Content-Type', 'Authorization'],
 			}),
 		);
+		this.app.use(cookieParser());
+		this.app.use(express.json());
+		this.app.options('*', cors()); 
 		this.passportConfig.initialize(passport);
 		this.app.use(passport.initialize());
 		this.port = Number(this.configService.get('PORT')) || 3003;
