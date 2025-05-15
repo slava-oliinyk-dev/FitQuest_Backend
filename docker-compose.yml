@@ -15,10 +15,10 @@ services:
   app:
     build:
       context: .
-      target: runner      # имя стадии рантайма в вашем Dockerfile
+      target: runner     
     restart: always
     env_file:
-      - .env              # все переменные подхватятся из файла
+      - .env             
     ports:
       - "${PORT}:3003"
     depends_on:
