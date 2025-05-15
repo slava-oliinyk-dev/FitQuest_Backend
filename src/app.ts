@@ -40,7 +40,10 @@ export class App {
 		this.app.use(express.json());
 		this.app.use(
 			cors({
-				origin: 'http://localhost:3000',
+				origin: [
+					'http://localhost:3000',
+					'https://fitness-web-frontend.vercel.app'
+				  ],
 				credentials: true,
 				methods: ['GET', 'POST', 'PUT', 'DELETE'],
 				allowedHeaders: ['Content-Type', 'Authorization'],
