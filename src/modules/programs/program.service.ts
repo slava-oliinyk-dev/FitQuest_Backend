@@ -9,121 +9,122 @@ import { ProgramDto } from './dto/program.dto';
 import { ProgramEntity } from './entity/program.entity';
 import { ILogger } from '../../log/logger.interface';
 import { WorkoutProgramModel } from '@prisma/client';
+import { ProgramWithDaysDto } from './dto/ProgramWithDays.dto';
 
 @injectable()
 export class ProgramService implements IProgramService {
-  constructor(
-    @inject(TYPES.ILogger) private loggerService: ILogger,
-    @inject(TYPES.PrismaService) private prismaService: PrismaService,
-    @inject(TYPES.ConfigService) private configService: IConfigService,
-    @inject(TYPES.ProgramRepository) private programRepository: IProgramRepository,
-  ) {}
+	constructor(
+		@inject(TYPES.ILogger) private loggerService: ILogger,
+		@inject(TYPES.PrismaService) private prismaService: PrismaService,
+		@inject(TYPES.ConfigService) private configService: IConfigService,
+		@inject(TYPES.ProgramRepository) private programRepository: IProgramRepository,
+	) {}
 
-  async getProgramsService(userId: number): Promise<ProgramDto[]> {
-    try {
-    const programs = await this.programRepository.getProgramsRepository(userId);
+	async getProgramsService(userId: number): Promise<ProgramWithDaysDto[]> {
+		try {
+			const programs = await this.programRepository.getProgramsRepository(userId);
+			this.loggerService.info(`User ${userId} retrieved all programs.`);
+			return programs.map((program) => {
+				return {
+					id: program.id,
+					title: program.title,
+					creationDate: program.creationDate.toISOString().split('T')[0].split('-').reverse().join('/'),
+					workoutDaysCount: program.workoutDays.length,
+					userName: program.user.name,
+				} as ProgramWithDaysDto;
+			});
+		} catch (error: any) {
+			this.loggerService.error(`Error in getProgramsService: ${error.message}`);
+			throw new HTTPError(500, 'Internal Server Error');
+		}
+	}
 
-    this.loggerService.info(`User ${userId} retrieved all programs.`);
+	async createProgramService(dto: ProgramDto, userId: number): Promise<ProgramWithDaysDto> {
+		try {
+			const createdProgram = await this.programRepository.createProgramRepository(dto, userId);
+			this.loggerService.info(`Program created with ID ${createdProgram.id} by user ${userId}.`);
+			const formattedDate = createdProgram.creationDate.toLocaleDateString('en-US');
+			return {
+				id: createdProgram.id,
+				title: createdProgram.title,
+				creationDate: createdProgram.creationDate.toISOString().split('T')[0].split('-').reverse().join('/'),
+				workoutDaysCount: createdProgram.workoutDays.length,
+				userName: createdProgram.user.name,
+			} as ProgramWithDaysDto;
+		} catch (error: any) {
+			this.loggerService.error(`Error in createProgramService: ${error.message}`);
+			throw new HTTPError(500, 'Internal Server Error');
+		}
+	}
 
-    return programs.map((program) => {
-      return {
-        id: program.id,
-        title: program.title,
-        color: program.color,
-      } as ProgramDto;
-    });
-  } catch (error: any) {
-    this.loggerService.error(`Error in getProgramsService: ${error.message}`);
-    throw new HTTPError(500, 'Internal Server Error');
-  }
-  }
+	async updateProgramService(id: number, dto: ProgramDto, userId: number): Promise<ProgramDto> {
+		try {
+			const program = await this.programRepository.findProgramById(id, userId);
+			if (!program) {
+				this.loggerService.warn(`Program with ID ${id} not found for user ${userId}.`);
+				throw new HTTPError(404, 'Program not found');
+			}
 
-  async createProgramService(dto: ProgramDto, userId: number): Promise<ProgramDto> {
-    try {
-    const createdProgram = await this.programRepository.createProgramRepository(dto, userId);
-    this.loggerService.info(`Program created with ID ${createdProgram.id} by user ${userId}.`);
-    return {
-      ...dto,
-      id: createdProgram.id,
-    } as ProgramDto;
-     } catch (error: any) {
-    this.loggerService.error(`Error in createProgramService: ${error.message}`);
-    throw new HTTPError(500, 'Internal Server Error');
-     }
-  }
+			const programEntity = new ProgramEntity(program.id, program.title, program.userId);
+			programEntity.update({ title: dto.title });
+			const updatedProgram = await this.programRepository.updateProgramRepository(id, programEntity);
 
-  async updateProgramService(id: number, dto: ProgramDto, userId: number): Promise<ProgramDto> {
-    try {
-    const program = await this.programRepository.findProgramById(id, userId);
-    if (!program) {
-      this.loggerService.warn(`Program with ID ${id} not found for user ${userId}.`);
-      throw new HTTPError(404, 'Program not found');
-    }
+			this.loggerService.info(`Program with ID ${id} updated by user ${userId}.`);
 
-    const programEntity = new ProgramEntity(program.id, program.title, program.color, program.userId);
-    programEntity.update({ title: dto.title, color: dto.color });
-    const updatedProgram = await this.programRepository.updateProgramRepository(id, programEntity);
+			return {
+				id: updatedProgram.id,
+				title: updatedProgram.title,
+			} as ProgramDto;
+		} catch (error: any) {
+			if (error instanceof HTTPError) {
+				throw error;
+			}
+			this.loggerService.error(`Error in updateProgramService: ${error.message}`);
+			throw new HTTPError(500, 'Internal Server Error');
+		}
+	}
 
-    this.loggerService.info(`Program with ID ${id} updated by user ${userId}.`);
+	async getProgramService(id: number, userId: number): Promise<ProgramDto> {
+		try {
+			const program = await this.programRepository.findProgramById(id, userId);
+			if (!program) {
+				this.loggerService.warn(`Program with ID ${id} not found for user ${userId}.`);
+				throw new HTTPError(404, 'Program not found');
+			}
 
-    return {
-      id: updatedProgram.id,
-      title: updatedProgram.title,
-      color: updatedProgram.color,
-    } as ProgramDto;
-  } catch (error: any) {
-    if (error instanceof HTTPError) {
-      throw error;
-    }
-    this.loggerService.error(`Error in updateProgramService: ${error.message}`);
-    throw new HTTPError(500, 'Internal Server Error');
-  }
-  }
+			this.loggerService.info(`User ${userId} retrieved program with ID ${id}.`);
 
-  async getProgramService(id: number, userId: number): Promise<ProgramDto> {
-    try {
-      const program = await this.programRepository.findProgramById(id, userId);
-      if (!program) {
-        this.loggerService.warn(`Program with ID ${id} not found for user ${userId}.`); 
-        throw new HTTPError(404, 'Program not found');
-      }
+			return {
+				id: program.id,
+				title: program.title,
+			} as ProgramDto;
+		} catch (error: any) {
+			if (error instanceof HTTPError) {
+				throw error;
+			}
+			this.loggerService.error(`Error in getProgramService: ${error.message}`);
+			throw new HTTPError(500, 'Internal Server Error');
+		}
+	}
 
-      this.loggerService.info(`User ${userId} retrieved program with ID ${id}.`);
+	async deleteProgramService(programId: number, userId: number): Promise<WorkoutProgramModel | null> {
+		try {
+			const program = await this.programRepository.findProgramById(programId, userId);
+			if (!program) {
+				this.loggerService.warn(`Program with ID ${programId} not found for user ${userId}.`);
+				throw new HTTPError(404, 'Program not found');
+			}
 
+			const deletedProgram = await this.programRepository.deleteProgramRepository(programId, userId);
+			this.loggerService.info(`Program with ID ${programId} and all related records deleted by user ${userId}.`);
 
-    return {
-      id: program.id,
-      title: program.title,
-      color: program.color,
-    } as ProgramDto;
-  } catch (error: any) {
-    if (error instanceof HTTPError) {
-      throw error;
-    }
-    this.loggerService.error(`Error in getProgramService: ${error.message}`);
-    throw new HTTPError(500, 'Internal Server Error');
-  }
-  }
-
-  async deleteProgramService(programId: number, userId: number): Promise<WorkoutProgramModel | null> {
-    try {
-      const program = await this.programRepository.findProgramById(programId, userId);
-      if (!program) {
-        this.loggerService.warn(`Program with ID ${programId} not found for user ${userId}.`);
-        throw new HTTPError(404, 'Program not found');
-      }
-
-      const deletedProgram = await this.programRepository.deleteProgramRepository(programId, userId);
-      this.loggerService.info(`Program with ID ${programId} and all related records deleted by user ${userId}.`);
-
-      return deletedProgram;
-    } catch (error: any) {
-      if (error instanceof HTTPError) {
-        throw error;
-      }
-      this.loggerService.error(`Error in deleteProgramService: ${error.message}`);
-      throw new HTTPError(500, 'Internal Server Error');
-    }
-  }
-  
+			return deletedProgram;
+		} catch (error: any) {
+			if (error instanceof HTTPError) {
+				throw error;
+			}
+			this.loggerService.error(`Error in deleteProgramService: ${error.message}`);
+			throw new HTTPError(500, 'Internal Server Error');
+		}
+	}
 }

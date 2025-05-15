@@ -5,6 +5,15 @@ import { IUserService } from '../modules/users/users.service.interface';
 import { TYPES } from '../types';
 import { inject, injectable } from 'inversify';
 import 'reflect-metadata';
+import { Request } from 'express';
+
+function cookieExtractor(req: Request): string | null {
+	let token = null;
+	if (req && req.cookies) {
+		token = req.cookies['token'];
+	}
+	return token;
+}
 
 @injectable()
 export class PassportConfig {
@@ -14,27 +23,30 @@ export class PassportConfig {
 	) {}
 
 	public initialize(passport: PassportStatic): void {
+		const jwtFromRequest = ExtractJwt.fromExtractors([ExtractJwt.fromAuthHeaderAsBearerToken(), cookieExtractor]);
+
 		const opts: StrategyOptions = {
-			jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+			jwtFromRequest,
 			secretOrKey: this.configService.get('SECRET'),
 		};
 
 		passport.use(
 			new JwtStrategy(opts, async (jwtPayload, done) => {
-			  try {
-				
-				const user = await this.userService.getUserInfo(jwtPayload.email); 
-				if (user) {
-			
-				  return done(null, { id: jwtPayload.id, email: user.email, role: user.role });
-				} else {
-				  return done(null, false);
+				try {
+					console.log('JWT Payload:', jwtPayload);
+					const user = await this.userService.getUserInfo(jwtPayload.email);
+					if (user) {
+						console.log('The user has been found:', user);
+						return done(null, { id: jwtPayload.id, email: user.email, role: user.role });
+					} else {
+						console.log('The user will not find by email:', jwtPayload.email);
+						return done(null, false);
+					}
+				} catch (error) {
+					console.error('Mistake in strategy Passport:', error);
+					return done(error, false);
 				}
-			  } catch (error) {
-				return done(error, false);
-			  }
-			})
-		  );
-		  
+			}),
+		);
 	}
 }

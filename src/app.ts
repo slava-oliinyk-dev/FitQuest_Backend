@@ -1,5 +1,7 @@
 import express, { Express } from 'express';
+import cors from 'cors';
 import { Server } from 'http';
+import cookieParser from 'cookie-parser';
 import { UserController } from './modules/users/user.controller';
 import { inject, injectable } from 'inversify';
 import { TYPES } from './types';
@@ -13,6 +15,7 @@ import { PassportConfig } from './config/passport-config';
 import { ProgramController } from './modules/programs/program.controller';
 import { DayController } from './modules/days/day.controller';
 import { ExerciseController } from './modules/exercises/exercise.controller';
+import { TelegramController } from './modules/telegram/telegram.controller';
 
 @injectable()
 export class App {
@@ -30,12 +33,22 @@ export class App {
 		@inject(TYPES.ConfigService) private configService: IConfigService,
 		@inject(TYPES.PrismaService) private prismaService: PrismaService,
 		@inject(TYPES.PassportConfig) private passportConfig: PassportConfig,
+		@inject(TYPES.TelegramController) private telegramController: TelegramController,
 	) {
 		this.app = express();
+		this.app.use(cookieParser());
 		this.app.use(express.json());
+		this.app.use(
+			cors({
+				origin: 'http://localhost:3000',
+				credentials: true,
+				methods: ['GET', 'POST', 'PUT', 'DELETE'],
+				allowedHeaders: ['Content-Type', 'Authorization'],
+			}),
+		);
 		this.passportConfig.initialize(passport);
 		this.app.use(passport.initialize());
-		this.port = 3000;
+		this.port = Number(this.configService.get('PORT')) || 3003;
 	}
 
 	private useRoutes(): void {
@@ -43,11 +56,13 @@ export class App {
 		this.app.use('/program', this.programController.router);
 		this.app.use('/day', this.dayController.router);
 		this.app.use('/exercise', this.exerciseController.router);
+		this.app.use('/telegram', this.telegramController.router);
 	}
 	useExeptionFilters(): void {
 		this.app.use(this.exeptionFilter.catch.bind(this.exeptionFilter));
 	}
 	public async init(): Promise<void> {
+		this.app.get('/health', (_req, res) => res.status(200).json({ status: 'ok' }));
 		this.useRoutes();
 		this.useExeptionFilters();
 		await this.prismaService.connect();

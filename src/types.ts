@@ -8,7 +8,7 @@ export const TYPES = {
 	UserController: Symbol.for('UserController'),
 	UserService: Symbol.for('UserService'),
 	UsersRepository: Symbol.for('UsersRepository'),
-    ProgramController: Symbol.for('ProgramController'),
+	ProgramController: Symbol.for('ProgramController'),
 	ProgramService: Symbol.for('ProgramService'),
 	ProgramRepository: Symbol.for('ProgramRepository'),
 	DayController: Symbol.for('DayController'),
@@ -17,4 +17,7 @@ export const TYPES = {
 	ExerciseController: Symbol.for('ExerciseController'),
 	ExerciseService: Symbol.for('ExerciseService'),
 	ExerciseRepository: Symbol.for('ExerciseRepository'),
+	TelegramController: Symbol.for('TelegramController'),
+	TelegramRepository: Symbol.for('TelegramRepository'),
+	TelegramService: Symbol.for('TelegramService'),
 };

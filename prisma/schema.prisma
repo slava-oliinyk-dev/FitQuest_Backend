@@ -10,13 +10,14 @@ datasource db {
 model UserModel {
   id              Int                   @id @default(autoincrement())
   email           String                @unique
-  password        String
+  password        String?
   name            String
   uniqueLogin     String                @unique
   role            Role
   photo           String?
   bio             String?
   workoutPrograms WorkoutProgramModel[]
+  emailConfirmation EmailConfirmation[] 
 }
 
 enum Role {
@@ -27,8 +28,8 @@ enum Role {
 model WorkoutProgramModel {
   id          Int                  @id @default(autoincrement())
   title       String
-  color       String
   userId      Int
+  creationDate DateTime @default(now())
   user        UserModel            @relation(fields: [userId], references: [id], onDelete: Cascade)
   workoutDays WorkoutDayModel[]
   @@unique([id, userId])
@@ -39,6 +40,7 @@ model WorkoutDayModel {
   dayName           String   
   muscle            String
   workoutProgramId  Int
+  creationDate      DateTime @default(now())
   workoutProgram    WorkoutProgramModel   @relation(fields: [workoutProgramId], references: [id], onDelete: Cascade)
   exercises         ExerciseModel[]
   @@unique([id, workoutProgramId])
@@ -56,4 +58,12 @@ model ExerciseModel {
   workoutDayId  Int
   workoutDay    WorkoutDayModel   @relation(fields: [workoutDayId], references: [id], onDelete: Cascade)
   @@unique([id, workoutDayId])
+}
+
+model EmailConfirmation {
+  confirmationCode String   @id
+  expirationDate   DateTime
+  isConfirmed      Boolean  @default(false)
+  userId           Int 
+  user             UserModel  @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

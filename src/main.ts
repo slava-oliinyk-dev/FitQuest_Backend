@@ -33,7 +33,12 @@ import { IExerciseRepository } from './modules/exercises/exercise.repository.int
 import { ExerciseController } from './modules/exercises/exercise.controller';
 import { ExerciseService } from './modules/exercises/exercise.service';
 import { ExerciseRepository } from './modules/exercises/exercise.repository';
-
+import { ITelegramRepository } from './modules/telegram/telegram.repository.interface';
+import { ITelegramService } from './modules/telegram/telegram.service.interface';
+import { ITelegramController } from './modules/telegram/telegram.controller.interface';
+import { TelegramRepository } from './modules/telegram/telegram.repository';
+import { TelegramService } from './modules/telegram/telegram.service';
+import { TelegramController } from './modules/telegram/telegram.controller';
 
 export const appBindings = new ContainerModule((bind: interfaces.Bind) => {
 	bind<ILogger>(TYPES.ILogger).to(LoggerService).inSingletonScope();
@@ -58,13 +63,11 @@ export const appBindings = new ContainerModule((bind: interfaces.Bind) => {
 	bind<IExerciseService>(TYPES.ExerciseService).to(ExerciseService);
 	bind<IExerciseRepository>(TYPES.ExerciseRepository).to(ExerciseRepository).inSingletonScope();
 
-
-
-
-
+	bind<ITelegramRepository>(TYPES.TelegramRepository).to(TelegramRepository).inSingletonScope();
+	bind<ITelegramService>(TYPES.TelegramService).to(TelegramService);
+	bind<ITelegramController>(TYPES.TelegramController).to(TelegramController);
 
 	bind<App>(TYPES.Application).to(App);
-
 });
 
 function bootstrap() {
