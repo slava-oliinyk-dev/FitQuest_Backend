@@ -156,7 +156,7 @@ export class UserController extends BaseController implements IUserController {
 		try {
 			const result = await this.userService.confirmEmail(code);
 			this.loggerService.info(`You have successfully confirmed your email.`);
-			return res.redirect('https://fitness-web-frontend-bjly2jxps-viacheslavols-projects.vercel.app/login');
+			return res.redirect('https://fitness-web-frontend.vercel.app/login');
 		} catch (error) {
 			next(error);
 		}
@@ -205,7 +205,7 @@ export class UserController extends BaseController implements IUserController {
 			res.cookie('token', jwt, {
 				httpOnly: true,
 				secure: process.env.NODE_ENV === 'production',
-				sameSite: 'lax',
+				sameSite: 'none',
 				maxAge: 24 * 60 * 60 * 1000,
 			});
 
