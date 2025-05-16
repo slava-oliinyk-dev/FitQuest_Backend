@@ -156,7 +156,7 @@ export class UserController extends BaseController implements IUserController {
 		try {
 			const result = await this.userService.confirmEmail(code);
 			this.loggerService.info(`You have successfully confirmed your email.`);
-			return res.redirect('http://localhost:3000/login');
+			return res.redirect('https://fitness-web-frontend-bjly2jxps-viacheslavols-projects.vercel.app/login');
 		} catch (error) {
 			next(error);
 		}

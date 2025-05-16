@@ -51,7 +51,7 @@ export class UserService implements IUserService {
 
 		const createdEmailConfirmation = await this.usersRepository.createEmailConfirmation(emailConfirmation);
 
-		const confirmationUrl = `http://localhost:3003/users/confirm-email/${emailConfirmation.confirmationCode}`;
+		const confirmationUrl = `https://cooperative-encouragement-production.up.railway.app/users/confirm-email/${emailConfirmation.confirmationCode}`;
 
 		const messageEmail = `
     <!DOCTYPE html>
@@ -200,7 +200,7 @@ export class UserService implements IUserService {
 			userId: emailConfirmation.id,
 		};
 		await this.usersRepository.createEmailConfirmation(emailConfirmationData);
-		const confirmationUrl = `http://localhost:3003/users/confirm-email/${emailConfirmationData.confirmationCode}`;
+		const confirmationUrl = `https://cooperative-encouragement-production.up.railway.app/confirm-email/${emailConfirmationData.confirmationCode}`;
 		const messageEmail = `
     <!DOCTYPE html>
     <html lang="ru">
