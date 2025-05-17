@@ -39,19 +39,15 @@ export class App {
 
 		this.app.use(
 			cors({
-				origin: [
-					'http://localhost:3000',
-					'https://fitness-web-frontend.vercel.app',
-					'https://fitness-web-frontend-bjly2jxps-viacheslavols-projects.vercel.app'
-				  ],
+				origin: ['http://localhost:3000', 'https://fitness-web-frontend.vercel.app', 'https://fitness-web-frontend-bjly2jxps-viacheslavols-projects.vercel.app'],
 				credentials: true,
-			    methods: ['GET','POST','PUT','DELETE','OPTIONS'],
+				methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 				allowedHeaders: ['Content-Type', 'Authorization'],
 			}),
 		);
 		this.app.use(cookieParser());
 		this.app.use(express.json());
-		this.app.options('*', cors()); 
+		this.app.options('*', cors());
 		this.passportConfig.initialize(passport);
 		this.app.use(passport.initialize());
 		this.port = Number(this.configService.get('PORT')) || 3003;
