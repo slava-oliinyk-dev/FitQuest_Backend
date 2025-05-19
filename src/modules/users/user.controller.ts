@@ -57,7 +57,7 @@ export class UserController extends BaseController implements IUserController {
 			},
 			{
 				path: '/google',
-				method: 'post',
+				method: 'get',
 				func: this.googleAuth,
 			},
 			{
