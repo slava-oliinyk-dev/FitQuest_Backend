@@ -55,11 +55,9 @@ export class UserController extends BaseController implements IUserController {
 				func: this.getUsers,
 				middlewares: [passport.authenticate('jwt', { session: false }), RoleMiddleware(['USER'])],
 			},
-			{
-				path: '/google',
-				method: 'post',
-				func: this.googleAuth,
-			},
+			{ path: '/google',        method: 'get',  func: this.redirectToGoogle },
+			{ path: '/google/callback', method: 'get', func: this.googleCallback },
+			
 			{
 				path: '/email',
 				method: 'post',
@@ -162,60 +160,85 @@ export class UserController extends BaseController implements IUserController {
 		}
 	}
 
-	async googleAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
-		const { access_token } = req.body;
+async redirectToGoogle(req: Request, res: Response) {
+  const client = new OAuth2Client(
+    this.configService.get('GOOGLE_CLIENT_ID'),
+    this.configService.get('GOOGLE_CLIENT_SECRET'),
+    this.configService.get('GOOGLE_REDIRECT_URI')
+  );
 
-		if (!access_token) {
-			return next(new HTTPError(400, 'Token not transferred'));
-		}
+  const url = client.generateAuthUrl({
+    access_type: 'offline',
+    prompt: 'consent',
+    scope: ['email','profile']
+  });
 
-		try {
-			const client = new OAuth2Client();
-			const ticket = await client.getTokenInfo(access_token);
 
-			if (!ticket || !ticket.email) {
-				this.loggerService.warn('Failed to verify Google token');
-				return next(new HTTPError(401, 'Invalid Google Token'));
-			}
+  res.redirect(url);
+}
 
-			const googleResponse = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
-				headers: { Authorization: `Bearer ${access_token}` },
-			});
+async googleCallback(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const code = req.query.code as string;
+  if (!code) {
+    return res.redirect(`${this.configService.get('FRONTEND_URL')}/login?error=no_code`);
+  }
 
-			const { email, name, picture } = googleResponse.data;
+  try {
+  
+    const client = new OAuth2Client(
+      this.configService.get('GOOGLE_CLIENT_ID'),
+      this.configService.get('GOOGLE_CLIENT_SECRET'),
+      this.configService.get('GOOGLE_REDIRECT_URI')
+    );
 
-			let user = await this.userService.getUserInfo(email);
 
-			if (!user) {
-				user = await this.userService.createUser({
-					email,
-					name: name || 'Google User',
-					uniqueLogin: email.split('@')[0] + Date.now(),
-					photo: picture,
-					password: undefined,
-					role: 'USER',
-				});
-				if (!user) {
-					this.loggerService.warn(`Error creating user ${email}`);
-					return next(new HTTPError(500, 'Error creating user'));
-				}
-			}
+    const { tokens } = await client.getToken(code);
+    client.setCredentials(tokens);
 
-			const jwt = await this.signJWT(user.id, user.email, this.configService.get('SECRET'));
-			res.cookie('token', jwt, {
-				httpOnly: true,
-				secure: process.env.NODE_ENV === 'production',
-				sameSite: 'none',
-				maxAge: 24 * 60 * 60 * 1000,
-			});
+  
+    const userInfoResponse = await axios.get<{
+      email: string;
+      name: string;
+      picture: string;
+    }>(
+      'https://www.googleapis.com/oauth2/v2/userinfo',
+      { headers: { Authorization: `Bearer ${tokens.access_token}` } }
+    );
+    const { email, name, picture } = userInfoResponse.data;
 
-			this.loggerService.info(`User ${email} has been successfully logged in via Google`);
-			this.ok(res, { message: 'Authorization via Google is successful', user });
-		} catch (error: any) {
-			this.loggerService.error(`Google Authorization Error: ${error.message}`);
-			next(new HTTPError(500, 'Google Authorization Error'));
-		}
-	}
+    let existing = await this.userService.getUserInfo(email);
+    if (!existing) {
+      const created = await this.userService.createUser({
+        email,
+        name: name || 'Google User',
+        uniqueLogin: email.split('@')[0] + Date.now(),
+        photo: picture,
+        password: undefined,
+        role: 'USER',
+      });
+      if (!created) {
+        return next(new HTTPError(500, 'Error creating user'));
+      }
+      existing = created;
+    }
+    const user = existing;
+
+    const jwt = await this.signJWT(user.id, user.email, this.configService.get('SECRET'));
+    res.cookie('token', jwt, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+
+  
+    res.redirect(`${this.configService.get('FRONTEND_URL')}/app`);
+  } catch (err: any) {
+    this.loggerService.error(`Google OAuth callback error: ${err.message}`);
+    res.redirect(`${this.configService.get('FRONTEND_URL')}/login?error=oauth_failed`);
+  }
+}
+
 
 	async email(req: Request, res: Response, next: NextFunction): Promise<void> {
 		try {

@@ -8,7 +8,8 @@ export interface IUserController {
 	deleteUserById(req: Request, res: Response, next: NextFunction): void;
 	getMe(req: Request, res: Response, next: NextFunction): void;
 	logout(req: Request, res: Response, next: NextFunction): void;
-	googleAuth(req: Request, res: Response, next: NextFunction): void;
+	redirectToGoogle(req: Request, res: Response, next: NextFunction): void;
+	googleCallback(req: Request, res: Response, next: NextFunction): void;
 	confirmEmail(req: Request, res: Response, next: NextFunction): void;
 	reEmail(req: Request, res: Response, next: NextFunction): void;
 }
