@@ -2,6 +2,7 @@ import express, { Express } from 'express';
 import cors from 'cors';
 import { Server } from 'http';
 import cookieParser from 'cookie-parser';
+import * as admin from 'firebase-admin'; 
 import { UserController } from './modules/users/user.controller';
 import { inject, injectable } from 'inversify';
 import { TYPES } from './types';
@@ -48,6 +49,13 @@ export class App {
 		this.app.use(cookieParser());
 		this.app.use(express.json());
 		this.app.options('*', cors());
+
+		const serviceAccount = JSON.parse(
+      	this.configService.get('FIREBASE_SERVICE_ACCOUNT'));
+    	admin.initializeApp({
+      	credential: admin.credential.cert(serviceAccount),
+    });
+
 		this.passportConfig.initialize(passport);
 		this.app.use(passport.initialize());
 		this.port = Number(this.configService.get('PORT')) || 3003;

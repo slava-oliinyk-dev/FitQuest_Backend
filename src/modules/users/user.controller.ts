@@ -6,6 +6,7 @@ import { TYPES } from '../../types';
 import { ILogger } from '../../log/logger.interface';
 import 'reflect-metadata';
 import { UserDto } from './dto/user.dto';
+import * as admin from 'firebase-admin';
 import { HTTPError } from '../../errors/http-error.class';
 import { ValidateMiddleware } from '../../common/validate.middleware';
 import { sign } from 'jsonwebtoken';
@@ -13,8 +14,6 @@ import { IConfigService } from '../../config/config.service.interface';
 import { IUserService } from './users.service.interface';
 import { RoleMiddleware } from '../../common/role.middleware';
 import passport from 'passport';
-import { OAuth2Client } from 'google-auth-library';
-import axios from 'axios';
 import { emailAdapter } from '../../utils/mailer';
 
 @injectable()
@@ -54,10 +53,7 @@ export class UserController extends BaseController implements IUserController {
 				method: 'get',
 				func: this.getUsers,
 				middlewares: [passport.authenticate('jwt', { session: false }), RoleMiddleware(['USER'])],
-			},
-			{ path: '/google',        method: 'get',  func: this.redirectToGoogle },
-			{ path: '/google/callback', method: 'get', func: this.googleCallback },
-			
+			},	
 			{
 				path: '/email',
 				method: 'post',
@@ -72,6 +68,11 @@ export class UserController extends BaseController implements IUserController {
 				path: '/confirm-email/:code',
 				method: 'get',
 				func: this.confirmEmail,
+			},
+			{
+  				path: '/firebase',
+  				method: 'post',
+  				func: this.firebaseAuth,
 			},
 			{
 				path: '/:id',
@@ -123,6 +124,51 @@ export class UserController extends BaseController implements IUserController {
 			next(error);
 		}
 	}
+	async firebaseAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return next(new HTTPError(401, 'No Firebase ID token provided'));
+    }
+    const idToken = authHeader.split(' ')[1];
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    const email = decoded.email!;
+    const name = decoded.name || 'Firebase User';
+    const picture = decoded.picture || null;
+
+    let user = await this.userService.getUserInfo(email);
+    if (!user) {
+      user = await this.userService.createUser({
+        email,
+        name,
+        uniqueLogin: `${email.split('@')[0]}_${Date.now()}`,
+        password: undefined,
+        role: 'USER',
+      });
+      if (!user) {
+        return next(new HTTPError(500, 'Error creating user'));
+      }
+    }
+
+    const jwt = await this.signJWT(user.id, user.email, this.configService.get('SECRET'));
+    res.cookie('token', jwt, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+
+    this.ok(res, {
+      id: user.id,
+      email: user.email,
+      uniqueLogin: user.uniqueLogin,
+      role: user.role,
+      photo: user.photo,
+    });
+  } catch (err: any) {
+    next(new HTTPError(401, `Firebase auth error: ${err.message}`));
+  }
+}
 
 	async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
 		try {
@@ -159,86 +205,6 @@ export class UserController extends BaseController implements IUserController {
 			next(error);
 		}
 	}
-
-async redirectToGoogle(req: Request, res: Response) {
-  const client = new OAuth2Client(
-    this.configService.get('GOOGLE_CLIENT_ID'),
-    this.configService.get('GOOGLE_CLIENT_SECRET'),
-    this.configService.get('GOOGLE_REDIRECT_URI')
-  );
-
-  const url = client.generateAuthUrl({
-    access_type: 'offline',
-    prompt: 'consent',
-    scope: ['email','profile']
-  });
-
-
-  res.redirect(url);
-}
-
-async googleCallback(req: Request, res: Response, next: NextFunction): Promise<void> {
-  const code = req.query.code as string;
-  if (!code) {
-    return res.redirect(`${this.configService.get('FRONTEND_URL')}/login?error=no_code`);
-  }
-
-  try {
-  
-    const client = new OAuth2Client(
-      this.configService.get('GOOGLE_CLIENT_ID'),
-      this.configService.get('GOOGLE_CLIENT_SECRET'),
-      this.configService.get('GOOGLE_REDIRECT_URI')
-    );
-
-
-    const { tokens } = await client.getToken(code);
-    client.setCredentials(tokens);
-
-  
-    const userInfoResponse = await axios.get<{
-      email: string;
-      name: string;
-      picture: string;
-    }>(
-      'https://www.googleapis.com/oauth2/v2/userinfo',
-      { headers: { Authorization: `Bearer ${tokens.access_token}` } }
-    );
-    const { email, name, picture } = userInfoResponse.data;
-
-    let existing = await this.userService.getUserInfo(email);
-    if (!existing) {
-      const created = await this.userService.createUser({
-        email,
-        name: name || 'Google User',
-        uniqueLogin: email.split('@')[0] + Date.now(),
-        photo: picture,
-        password: undefined,
-        role: 'USER',
-      });
-      if (!created) {
-        return next(new HTTPError(500, 'Error creating user'));
-      }
-      existing = created;
-    }
-    const user = existing;
-
-    const jwt = await this.signJWT(user.id, user.email, this.configService.get('SECRET'));
-    res.cookie('token', jwt, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'none',
-      maxAge: 24 * 60 * 60 * 1000,
-    });
-
-  
-    res.redirect(`${this.configService.get('FRONTEND_URL')}/app`);
-  } catch (err: any) {
-    this.loggerService.error(`Google OAuth callback error: ${err.message}`);
-    res.redirect(`${this.configService.get('FRONTEND_URL')}/login?error=oauth_failed`);
-  }
-}
-
 
 	async email(req: Request, res: Response, next: NextFunction): Promise<void> {
 		try {
