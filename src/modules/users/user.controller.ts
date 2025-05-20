@@ -110,14 +110,15 @@ export class UserController extends BaseController implements IUserController {
 
 	async login(req: Request, res: Response, next: NextFunction): Promise<void> {
 		try {
+			const isProd = process.env.NODE_ENV === 'production';
 			const result = await this.userService.validateUser(req.body);
 			const jwt = await this.signJWT(result!.id, result!.email, this.configService.get('SECRET'));
-			res.cookie('token', jwt, {
-				httpOnly: true,
-				secure: process.env.NODE_ENV === 'production',
-				sameSite: 'lax',
-				maxAge: 24 * 60 * 60 * 1000,
-			});
+		res.cookie('token', jwt, {
+  			httpOnly: true,
+  			secure: isProd,                      
+  			sameSite: isProd ? 'none' : 'lax',   
+  			maxAge: 24 * 60 * 60 * 1000,
+});
 			this.loggerService.info(`User with ID ${result!.id} successfully logged in.`);
 			this.ok(res, 'Ales good');
 		} catch (error) {
@@ -149,14 +150,14 @@ export class UserController extends BaseController implements IUserController {
         return next(new HTTPError(500, 'Error creating user'));
       }
     }
-
+	const isProd = process.env.NODE_ENV === 'production';
     const jwt = await this.signJWT(user.id, user.email, this.configService.get('SECRET'));
-    res.cookie('token', jwt, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'none',
-      maxAge: 24 * 60 * 60 * 1000,
-    });
+	res.cookie('token', jwt, {
+  			httpOnly: true,
+  			secure: isProd,                      
+  			sameSite: isProd ? 'none' : 'lax',   
+  			maxAge: 24 * 60 * 60 * 1000,
+});
 
     this.ok(res, {
       id: user.id,
