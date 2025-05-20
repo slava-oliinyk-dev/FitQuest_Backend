@@ -88,6 +88,16 @@ export class UserController extends BaseController implements IUserController {
 			},
 		]);
 	}
+	  private getCookieOptions() {
+    const isProd = process.env.NODE_ENV === 'production';
+    return {
+      httpOnly: true,
+      secure: isProd,                  
+      sameSite: isProd ? 'none' : 'lax', 
+      path: '/',                        
+    } as const;
+  }
+
 
 	async register(req: Request, res: Response, next: NextFunction): Promise<void> {
 		try {
@@ -110,15 +120,12 @@ export class UserController extends BaseController implements IUserController {
 
 	async login(req: Request, res: Response, next: NextFunction): Promise<void> {
 		try {
-			const isProd = process.env.NODE_ENV === 'production';
 			const result = await this.userService.validateUser(req.body);
 			const jwt = await this.signJWT(result!.id, result!.email, this.configService.get('SECRET'));
-		res.cookie('token', jwt, {
-  			httpOnly: true,
-  			secure: isProd,                      
-  			sameSite: isProd ? 'none' : 'lax',   
-  			maxAge: 24 * 60 * 60 * 1000,
-});
+		      res.cookie('token', jwt, {
+        ...this.getCookieOptions(),
+        maxAge: 24 * 60 * 60 * 1000, // 24 часа
+      });
 			this.loggerService.info(`User with ID ${result!.id} successfully logged in.`);
 			this.ok(res, 'Ales good');
 		} catch (error) {
@@ -150,14 +157,11 @@ export class UserController extends BaseController implements IUserController {
         return next(new HTTPError(500, 'Error creating user'));
       }
     }
-	const isProd = process.env.NODE_ENV === 'production';
     const jwt = await this.signJWT(user.id, user.email, this.configService.get('SECRET'));
-	res.cookie('token', jwt, {
-  			httpOnly: true,
-  			secure: isProd,                      
-  			sameSite: isProd ? 'none' : 'lax',   
-  			maxAge: 24 * 60 * 60 * 1000,
-});
+	   res.cookie('token', jwt, {
+        ...this.getCookieOptions(),
+        maxAge: 24 * 60 * 60 * 1000,
+      });
 
     this.ok(res, {
       id: user.id,
@@ -172,14 +176,11 @@ export class UserController extends BaseController implements IUserController {
 }
 
 	async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
+
 		try {
-			res.clearCookie('token', {
-				httpOnly: true,
-				secure: process.env.NODE_ENV === 'production',
-				sameSite: 'lax',
-			});
+		   res.clearCookie('token', this.getCookieOptions());
 			this.loggerService.info(`The user has successfully logged out.`);
-			this.ok(res, 'Logout successful');
+			this.ok(res, 'Logout successful')
 		} catch (error) {
 			next(error);
 		}
