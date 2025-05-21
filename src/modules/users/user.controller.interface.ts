@@ -11,4 +11,5 @@ export interface IUserController {
 	firebaseAuth(req: Request, res: Response, next: NextFunction): void;
 	confirmEmail(req: Request, res: Response, next: NextFunction): void;
 	reEmail(req: Request, res: Response, next: NextFunction): void;
+	firebaseRedirect(req: Request, res: Response, next: NextFunction): void;
 }

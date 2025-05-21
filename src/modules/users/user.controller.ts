@@ -60,6 +60,12 @@ export class UserController extends BaseController implements IUserController {
 				func: this.email,
 			},
 			{
+ 				path: '/firebase-redirect',
+  				method: 'get',
+  				func: this.firebaseRedirect,
+			},
+
+			{
 				path: '/re-email',
 				method: 'post',
 				func: this.reEmail,
@@ -88,15 +94,15 @@ export class UserController extends BaseController implements IUserController {
 			},
 		]);
 	}
-	  private getCookieOptions() {
-    const isProd = process.env.NODE_ENV === 'production';
-    return {
-      httpOnly: true,
-      secure: isProd,                  
-      sameSite: isProd ? 'none' : 'lax', 
-      path: '/',                        
-    } as const;
-  }
+	private getCookieOptions() {
+    	const isProd = process.env.NODE_ENV === 'production';
+    		return {
+      			httpOnly: true,
+      			secure: isProd,                  
+      			sameSite: isProd ? 'none' : 'lax', 
+      			path: '/',                        
+    	} as const;
+  	}
 
 
 	async register(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -124,7 +130,7 @@ export class UserController extends BaseController implements IUserController {
 			const jwt = await this.signJWT(result!.id, result!.email, this.configService.get('SECRET'));
 		      res.cookie('token', jwt, {
         ...this.getCookieOptions(),
-        maxAge: 24 * 60 * 60 * 1000, // 24 часа
+        maxAge: 24 * 60 * 60 * 1000, 
       });
 			this.loggerService.info(`User with ID ${result!.id} successfully logged in.`);
 			this.ok(res, 'Ales good');
@@ -132,6 +138,7 @@ export class UserController extends BaseController implements IUserController {
 			next(error);
 		}
 	}
+
 	async firebaseAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const authHeader = req.headers.authorization;
@@ -142,7 +149,6 @@ export class UserController extends BaseController implements IUserController {
     const decoded = await admin.auth().verifyIdToken(idToken);
     const email = decoded.email!;
     const name = decoded.name || 'Firebase User';
-    const picture = decoded.picture || null;
 
     let user = await this.userService.getUserInfo(email);
     if (!user) {
@@ -174,6 +180,37 @@ export class UserController extends BaseController implements IUserController {
     next(new HTTPError(401, `Firebase auth error: ${err.message}`));
   }
 }
+
+async firebaseRedirect(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const idToken = String(req.query.token);
+    const redirect = String(req.query.redirect || '/');
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    const email = decoded.email!;
+    let user = await this.userService.getUserInfo(email);
+    if (!user) {
+      user = await this.userService.createUser({
+        email,
+        name: decoded.name || 'Firebase User',
+        uniqueLogin: `${email.split('@')[0]}_${Date.now()}`,
+        password: undefined,
+        role: 'USER',
+      });
+	   if (!user) {
+        return next(new HTTPError(500, 'Error creating user'));
+      }
+    }
+    const jwt = await this.signJWT(user.id, user.email, this.configService.get('SECRET'));
+    res.cookie('token', jwt, {
+      ...this.getCookieOptions(),
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+    res.redirect(redirect);
+  } catch (err: any) {
+    next(new HTTPError(401, `Firebase redirect error: ${err.message}`));
+  }
+}
+
 
 	async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
 
