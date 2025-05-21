@@ -94,15 +94,15 @@ export class UserController extends BaseController implements IUserController {
 			},
 		]);
 	}
-	private getCookieOptions() {
-    	const isProd = process.env.NODE_ENV === 'production';
-    		return {
-      			httpOnly: true,
-      			secure: isProd,                  
-      			sameSite: isProd ? 'none' : 'lax', 
-      			path: '/',                        
-    	} as const;
-  	}
+private getCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: true,          
+    sameSite: 'none' as const,  
+    path: '/',
+  };
+}
+
 
 
 	async register(req: Request, res: Response, next: NextFunction): Promise<void> {
