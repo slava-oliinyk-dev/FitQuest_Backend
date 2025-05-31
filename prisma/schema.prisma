@@ -64,6 +64,6 @@ model EmailConfirmation {
   confirmationCode String   @id
   expirationDate   DateTime
   isConfirmed      Boolean  @default(false)
-  userId           Int 
+  userId           Int @unique
   user             UserModel  @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

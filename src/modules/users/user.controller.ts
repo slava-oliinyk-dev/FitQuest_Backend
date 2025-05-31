@@ -106,8 +106,19 @@ private getCookieOptions() {
 
 
 	async register(req: Request, res: Response, next: NextFunction): Promise<void> {
-		try {
-			const result = await this.userService.createUser(req.body);
+	 try {
+    const dto: UserDto = {
+      email: req.body.email,
+      name: req.body.name,
+      uniqueLogin: req.body.uniqueLogin,
+      password: req.body.password,
+      role: req.body.role,
+      photo: req.body.photo,
+      bio: req.body.bio,
+      provider: 'LOCAL',          
+    };
+
+    const result = await this.userService.createUser(dto);
 			if (!result) {
 				this.loggerService.warn(`User with email ${req.body.email} or unique login ${req.body.uniqueLogin} already exists.`);
 				return next(new HTTPError(422, 'User with this email or unique login already exists'));
@@ -152,13 +163,15 @@ private getCookieOptions() {
 
     let user = await this.userService.getUserInfo(email);
     if (!user) {
-      user = await this.userService.createUser({
+		 const dto: UserDto = {
         email,
         name,
         uniqueLogin: `${email.split('@')[0]}_${Date.now()}`,
         password: undefined,
         role: 'USER',
-      });
+        provider: 'GOOGLE',  
+      };
+    user = await this.userService.createUser(dto);
       if (!user) {
         return next(new HTTPError(500, 'Error creating user'));
       }
@@ -189,13 +202,16 @@ async firebaseRedirect(req: Request, res: Response, next: NextFunction): Promise
     const email = decoded.email!;
     let user = await this.userService.getUserInfo(email);
     if (!user) {
-      user = await this.userService.createUser({
+      const dto: UserDto = {
         email,
         name: decoded.name || 'Firebase User',
         uniqueLogin: `${email.split('@')[0]}_${Date.now()}`,
         password: undefined,
         role: 'USER',
-      });
+        provider: 'GOOGLE',  
+      };
+
+      user = await this.userService.createUser(dto);
 	   if (!user) {
         return next(new HTTPError(500, 'Error creating user'));
       }

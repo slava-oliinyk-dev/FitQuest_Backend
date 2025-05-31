@@ -28,4 +28,6 @@ export class UserDto {
 	@IsOptional()
 	@IsString({ message: 'Invalid bio' })
 	bio?: string;
+
+	provider!: 'LOCAL' | 'GOOGLE'; 
 }
