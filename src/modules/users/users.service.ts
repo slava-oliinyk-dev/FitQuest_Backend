@@ -41,7 +41,7 @@ export class UserService implements IUserService {
     const createdUser = await this.usersRepository.create(newUser);
 
     if (dto.provider === 'GOOGLE') {
-      await this.usersRepository.updateEmailConfirmationByUserId({
+      await this.usersRepository.createEmailConfirmation({
         userId: createdUser.id,
         confirmationCode: uuidv4(),
         expirationDate: add(new Date(), { minutes: 15 }),
