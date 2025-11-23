@@ -1,21 +1,36 @@
+import { config as loadEnv } from 'dotenv';
 import nodemailer from 'nodemailer';
+
+loadEnv();
+
+const required = (key: string): string => {
+	const value = process.env[key];
+	if (!value) {
+		throw new Error(`[Mailer] Missing environment variable: ${key}`);
+	}
+	return value;
+};
+
+const mailUser = required('MAIL_USER');
+const mailPassword = required('MAIL_PASSWORD');
+const mailFrom = process.env.MAIL_FROM ?? `"FitQuest" <${mailUser}>`;
+const mailService = process.env.MAIL_SERVICE ?? 'gmail';
 
 export const emailAdapter = {
 	async sendEmail(email: string, subject: string, message: string) {
 		const transport = nodemailer.createTransport({
-			service: 'gmail',
+			service: mailService,
 			auth: {
-				user: 'fitquestde@gmail.com',
-				pass: 'csat teni upgk oiln',
+				user: mailUser,
+				pass: mailPassword,
 			},
 		});
 
-		const info = await transport.sendMail({
-			from: '"FitQuest" <fitquestde@gmail.com>',
+		await transport.sendMail({
+			from: mailFrom,
 			to: email,
-			subject: subject,
+			subject,
 			html: message,
 		});
-		return;
 	},
 };
