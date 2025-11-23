@@ -211,7 +211,7 @@ export class ExerciseService implements IExerciseService {
 				throw new HTTPError(404, 'Day not found');
 			}
 
-			const exercise = await this.exerciseRepository.findExerciseById(exerciseId, dayId);
+			const exercise = await this.exerciseRepository.findExerciseByIdAndDay(exerciseId, dayId);
 			if (!exercise) {
 				this.loggerService.warn(`Exercise with ID ${exerciseId} not found in day ${dayId}.`);
 				return false;

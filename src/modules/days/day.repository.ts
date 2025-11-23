@@ -34,6 +34,17 @@ export class DayRepository implements IDayRepository {
 		});
 	}
 
+	async findDayByIdAndUser(dayId: number, userId: number): Promise<WorkoutDayModel | null> {
+		return this.prismaService.client.workoutDayModel.findFirst({
+			where: {
+				id: dayId,
+				workoutProgram: {
+					userId,
+				},
+			},
+		});
+	}
+
 	async createDay(programId: number, dto: DayDto): Promise<DayWithExercise> {
 		return this.prismaService.client.workoutDayModel.create({
 			data: {
