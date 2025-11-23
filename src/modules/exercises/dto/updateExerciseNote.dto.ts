@@ -1,13 +1,15 @@
-import { IsString, IsInt, IsOptional, IsNumber } from 'class-validator';
+import { IsString, IsInt, IsOptional } from 'class-validator';
 
-export class UpdateExerciseNote {
+export class UpdateExerciseNoteDto {
 	@IsOptional()
-	id: number;
+	@IsInt({ message: 'Exercise id must be an integer' })
+	id?: number;
 
 	@IsOptional()
 	@IsString({ message: 'Note must be a string' })
-	note: string | null;
+	note?: string | null;
 
 	@IsOptional()
-	workoutDayId: number;
+	@IsInt({ message: 'Workout day id must be an integer' })
+	workoutDayId?: number;
 }

@@ -1,6 +1,5 @@
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../types';
-import { IConfigService } from '../../config/config.service.interface';
 import { HTTPError } from '../../errors/http-error.class';
 import { ILogger } from '../../log/logger.interface';
 import { IExerciseService } from './exercise.service.interface';
@@ -8,7 +7,7 @@ import { IExerciseRepository } from './exercise.repository.interface';
 import { ExerciseDto } from './dto/exercise.dto';
 import { IDayRepository } from '../days/day.repository.interface';
 import { ExerciseEntity } from './entity/exercise.entity';
-import { UpdateExerciseNote } from './dto/updateExerciseNote.dto';
+import { UpdateExerciseNoteDto } from './dto/updateExerciseNote.dto';
 
 @injectable()
 export class ExerciseService implements IExerciseService {
@@ -26,7 +25,7 @@ export class ExerciseService implements IExerciseService {
 				throw new HTTPError(404, 'Day not found');
 			}
 
-			const exercises = await this.exerciseRepository.getExercisesRepository(dayId, userId);
+			const exercises = await this.exerciseRepository.getExercisesByDayAndUser(dayId, userId);
 
 			if (exercises.length === 0) {
 				this.loggerService.warn(`No exercises found for day ${dayId} and user ${userId}.`);
@@ -61,7 +60,7 @@ export class ExerciseService implements IExerciseService {
 				throw new HTTPError(404, 'Day not found');
 			}
 
-			const createdExercise = await this.exerciseRepository.createExerciseRepository(dto, dayId);
+			const createdExercise = await this.exerciseRepository.createExercise(dayId, dto);
 			this.loggerService.info(`Exercise created with ID ${createdExercise.id} in day ${dayId} by user ${userId}.`);
 
 			return {
@@ -91,7 +90,7 @@ export class ExerciseService implements IExerciseService {
 				throw new HTTPError(404, 'Day not found');
 			}
 
-			const exercise = await this.exerciseRepository.findExerciseById(exerciseId, dayId);
+			const exercise = await this.exerciseRepository.findExerciseByIdAndDay(exerciseId, dayId);
 			if (!exercise) {
 				this.loggerService.warn(`Exercise with ID ${exerciseId} not found in day ${dayId}.`);
 				throw new HTTPError(404, 'Exercise not found');
@@ -110,7 +109,7 @@ export class ExerciseService implements IExerciseService {
 			);
 			exerciseEntity.update(dto);
 
-			const updatedExercise = await this.exerciseRepository.updateExerciseRepository(exerciseEntity);
+			const updatedExercise = await this.exerciseRepository.updateExercise(exerciseEntity);
 			this.loggerService.info(`Exercise with ID ${exerciseId} updated by user ${userId}.`);
 
 			return {
@@ -132,7 +131,7 @@ export class ExerciseService implements IExerciseService {
 		}
 	}
 
-	async updateExerciseNoteService(dto: UpdateExerciseNote, dayId: number, exerciseId: number, userId: number): Promise<UpdateExerciseNote> {
+	async updateExerciseNoteService(dto: UpdateExerciseNoteDto, dayId: number, exerciseId: number, userId: number): Promise<UpdateExerciseNoteDto> {
 		try {
 			const day = await this.dayRepository.findDayByIdAndUser(dayId, userId);
 			if (!day) {
@@ -140,19 +139,19 @@ export class ExerciseService implements IExerciseService {
 				throw new HTTPError(404, 'Day not found');
 			}
 
-			const exercise = await this.exerciseRepository.findExerciseById(exerciseId, dayId);
+			const exercise = await this.exerciseRepository.findExerciseByIdAndDay(exerciseId, dayId);
 			if (!exercise) {
 				this.loggerService.warn(`Exercise with ID ${exerciseId} not found in day ${dayId}.`);
 				throw new HTTPError(404, 'Exercise not found');
 			}
 
-			const updateDto: UpdateExerciseNote = {
+			const updateDto: UpdateExerciseNoteDto = {
 				id: exerciseId,
 				workoutDayId: dayId,
 				note: dto.note,
 			};
 
-			const updatedExercise = await this.exerciseRepository.updateExerciseNoteRepository(updateDto);
+			const updatedExercise = await this.exerciseRepository.updateExerciseNote(updateDto);
 			this.loggerService.info(`Exercise note updated for exercise ${exerciseId} in day ${dayId} by user ${userId}.`);
 
 			return {
@@ -177,7 +176,7 @@ export class ExerciseService implements IExerciseService {
 				throw new HTTPError(404, 'Day not found');
 			}
 
-			const exercise = await this.exerciseRepository.getExerciseRepository(dayId, exerciseId, userId);
+			const exercise = await this.exerciseRepository.getExerciseByIdAndUser(dayId, exerciseId, userId);
 			if (!exercise) {
 				this.loggerService.warn(`Exercise with ID ${exerciseId} not found for user ${userId} in day ${dayId}.`);
 				throw new HTTPError(404, 'Exercise not found');
@@ -218,7 +217,7 @@ export class ExerciseService implements IExerciseService {
 				return false;
 			}
 
-			await this.exerciseRepository.deleteExerciseById(exerciseId);
+			await this.exerciseRepository.deleteExercise(exerciseId);
 			this.loggerService.info(`Exercise with ID ${exerciseId} deleted in day ${dayId} for user ${userId}.`);
 			return true;
 		} catch (error: any) {

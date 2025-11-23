@@ -10,7 +10,7 @@ import { HTTPError } from '../../errors/http-error.class';
 import passport from 'passport';
 import { ExerciseService } from './exercise.service';
 import { ExerciseDto } from './dto/exercise.dto';
-import { UpdateExerciseNote } from './dto/updateExerciseNote.dto';
+import { UpdateExerciseNoteDto } from './dto/updateExerciseNote.dto';
 
 @injectable()
 export class ExerciseController extends BaseController implements IExerciseController {
@@ -21,13 +21,13 @@ export class ExerciseController extends BaseController implements IExerciseContr
 		super(loggerService);
 		this.bindRoutes([
 			{
-				path: '/:dayId',
+				path: '/:dayId/exercises',
 				method: 'get',
 				func: this.getExercisesController,
 				middlewares: [passport.authenticate('jwt', { session: false })],
 			},
 			{
-				path: '/:dayId',
+				path: '/:dayId/exercises',
 				method: 'post',
 				func: this.createExerciseController,
 				middlewares: [passport.authenticate('jwt', { session: false }), new ValidateMiddleware(ExerciseDto)],
@@ -39,10 +39,10 @@ export class ExerciseController extends BaseController implements IExerciseContr
 				middlewares: [passport.authenticate('jwt', { session: false }), new ValidateMiddleware(ExerciseDto)],
 			},
 			{
-				path: '/:dayId/note/:exerciseId',
+				path: '/:dayId/exercises/:exerciseId/note',
 				method: 'put',
 				func: this.updateExerciseNoteController,
-				middlewares: [passport.authenticate('jwt', { session: false })],
+				middlewares: [passport.authenticate('jwt', { session: false }), new ValidateMiddleware(UpdateExerciseNoteDto)],
 			},
 			{
 				path: '/:dayId/exercises/:exerciseId',
@@ -61,8 +61,8 @@ export class ExerciseController extends BaseController implements IExerciseContr
 
 	async getExercisesController(req: Request, res: Response, next: NextFunction): Promise<void> {
 		try {
-			const user = req.user as { id: number };
-			const userId = user.id;
+			const user = req.user as { id?: number } | undefined;
+			const userId = user?.id;
 			const dayId = parseInt(req.params.dayId, 10);
 
 			if (!userId) {
@@ -85,8 +85,8 @@ export class ExerciseController extends BaseController implements IExerciseContr
 	async createExerciseController(req: Request, res: Response, next: NextFunction): Promise<void> {
 		try {
 			const exerciseDto: ExerciseDto = req.body;
-			const user = req.user as { id: number };
-			const userId = user.id;
+			const user = req.user as { id?: number } | undefined;
+			const userId = user?.id;
 			const dayId = parseInt(req.params.dayId, 10);
 
 			if (!userId) {
@@ -108,9 +108,9 @@ export class ExerciseController extends BaseController implements IExerciseContr
 
 	async updateExerciseNoteController(req: Request, res: Response, next: NextFunction): Promise<void> {
 		try {
-			const exerciseNoteDto: UpdateExerciseNote = req.body;
-			const user = req.user as { id: number };
-			const userId = user.id;
+			const exerciseNoteDto: UpdateExerciseNoteDto = req.body;
+			const user = req.user as { id?: number } | undefined;
+			const userId = user?.id;
 			const dayId = parseInt(req.params.dayId, 10);
 			const exerciseId = parseInt(req.params.exerciseId, 10);
 
@@ -126,7 +126,7 @@ export class ExerciseController extends BaseController implements IExerciseContr
 			this.loggerService.info(`User ${userId} updated exercise note with ID ${exerciseId} in day with ID ${dayId}.`);
 			this.ok(res, updatedExerciseNote);
 		} catch (error: any) {
-			this.loggerService.error(`Error in updateExerciseNoteController:${error.message}`);
+			this.loggerService.error(`Error in updateExerciseNoteController: ${error.message}`);
 			next(error);
 		}
 	}
@@ -134,8 +134,8 @@ export class ExerciseController extends BaseController implements IExerciseContr
 	async updateExerciseController(req: Request, res: Response, next: NextFunction): Promise<void> {
 		try {
 			const exerciseDto: ExerciseDto = req.body;
-			const user = req.user as { id: number };
-			const userId = user.id;
+			const user = req.user as { id?: number } | undefined;
+			const userId = user?.id;
 			const dayId = parseInt(req.params.dayId, 10);
 			const exerciseId = parseInt(req.params.exerciseId, 10);
 
@@ -158,8 +158,8 @@ export class ExerciseController extends BaseController implements IExerciseContr
 
 	async getExerciseController(req: Request, res: Response, next: NextFunction): Promise<void> {
 		try {
-			const user = req.user as { id: number };
-			const userId = user.id;
+			const user = req.user as { id?: number } | undefined;
+			const userId = user?.id;
 			const dayId = parseInt(req.params.dayId, 10);
 			const exerciseId = parseInt(req.params.exerciseId, 10);
 
@@ -182,8 +182,8 @@ export class ExerciseController extends BaseController implements IExerciseContr
 
 	async deleteExerciseController(req: Request, res: Response, next: NextFunction): Promise<void> {
 		try {
-			const user = req.user as { id: number };
-			const userId = user.id;
+			const user = req.user as { id?: number } | undefined;
+			const userId = user?.id;
 			const dayId = parseInt(req.params.dayId, 10);
 			const exerciseId = parseInt(req.params.exerciseId, 10);
 

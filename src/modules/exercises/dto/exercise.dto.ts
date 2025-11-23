@@ -1,10 +1,12 @@
-import { IsString, IsInt, IsOptional, IsNumber } from 'class-validator';
+import { IsString, IsInt, IsOptional, IsNumber, IsNotEmpty } from 'class-validator';
 
 export class ExerciseDto {
 	@IsOptional()
+	@IsInt({ message: 'Exercise id must be an integer' })
 	id?: number;
 
 	@IsString({ message: 'Exercise name is required' })
+	@IsNotEmpty({ message: 'Exercise name must not be empty' })
 	name: string;
 
 	@IsInt({ message: 'Sets must be an integer' })

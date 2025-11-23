@@ -5,13 +5,13 @@ import { IExerciseRepository } from './exercise.repository.interface';
 import { ExerciseModel } from '@prisma/client';
 import { ExerciseDto } from './dto/exercise.dto';
 import { ExerciseEntity } from './entity/exercise.entity';
-import { UpdateExerciseNote } from './dto/updateExerciseNote.dto';
+import { UpdateExerciseNoteDto } from './dto/updateExerciseNote.dto';
 
 @injectable()
 export class ExerciseRepository implements IExerciseRepository {
 	constructor(@inject(TYPES.PrismaService) private prismaService: PrismaService) {}
 
-	async getExercisesRepository(dayId: number, userId: number): Promise<ExerciseModel[]> {
+	async getExercisesByDayAndUser(dayId: number, userId: number): Promise<ExerciseModel[]> {
 		return this.prismaService.client.exerciseModel.findMany({
 			where: {
 				workoutDayId: dayId,
@@ -24,7 +24,16 @@ export class ExerciseRepository implements IExerciseRepository {
 		});
 	}
 
-	async createExerciseRepository(dto: ExerciseDto, dayId: number): Promise<ExerciseModel> {
+	async findExerciseByIdAndDay(exerciseId: number, dayId: number): Promise<ExerciseModel | null> {
+		return this.prismaService.client.exerciseModel.findFirst({
+			where: {
+				id: exerciseId,
+				workoutDayId: dayId,
+			},
+		});
+	}
+
+	async createExercise(dayId: number, dto: ExerciseDto): Promise<ExerciseModel> {
 		return this.prismaService.client.exerciseModel.create({
 			data: {
 				name: dto.name,
@@ -39,16 +48,7 @@ export class ExerciseRepository implements IExerciseRepository {
 		});
 	}
 
-	async findExerciseById(exerciseId: number, dayId: number): Promise<ExerciseModel | null> {
-		return this.prismaService.client.exerciseModel.findFirst({
-			where: {
-				id: exerciseId,
-				workoutDayId: dayId,
-			},
-		});
-	}
-
-	async updateExerciseRepository(entity: ExerciseEntity): Promise<ExerciseModel> {
+	async updateExercise(entity: ExerciseEntity): Promise<ExerciseModel> {
 		return this.prismaService.client.exerciseModel.update({
 			where: {
 				id_workoutDayId: {
@@ -68,7 +68,7 @@ export class ExerciseRepository implements IExerciseRepository {
 		});
 	}
 
-	async updateExerciseNoteRepository(dto: UpdateExerciseNote): Promise<ExerciseModel> {
+	async updateExerciseNote(dto: UpdateExerciseNoteDto): Promise<ExerciseModel> {
 		return this.prismaService.client.exerciseModel.update({
 			where: {
 				id_workoutDayId: {
@@ -82,7 +82,7 @@ export class ExerciseRepository implements IExerciseRepository {
 		});
 	}
 
-	async getExerciseRepository(dayId: number, exerciseId: number, userId: number): Promise<ExerciseModel | null> {
+	async getExerciseByIdAndUser(dayId: number, exerciseId: number, userId: number): Promise<ExerciseModel | null> {
 		return this.prismaService.client.exerciseModel.findFirst({
 			where: {
 				id: exerciseId,
@@ -96,7 +96,7 @@ export class ExerciseRepository implements IExerciseRepository {
 		});
 	}
 
-	async deleteExerciseById(exerciseId: number): Promise<void> {
+	async deleteExercise(exerciseId: number): Promise<void> {
 		await this.prismaService.client.exerciseModel.delete({
 			where: { id: exerciseId },
 		});
