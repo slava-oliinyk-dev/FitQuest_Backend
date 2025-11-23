@@ -20,13 +20,13 @@ export class DayController extends BaseController implements IDayController {
 		super(loggerService);
 		this.bindRoutes([
 			{
-				path: '/:programId',
+				path: '/:programId/days',
 				method: 'get',
 				func: this.getDaysController,
 				middlewares: [passport.authenticate('jwt', { session: false })],
 			},
 			{
-				path: '/:programId',
+				path: '/:programId/days',
 				method: 'post',
 				func: this.createDayController,
 				middlewares: [passport.authenticate('jwt', { session: false }), new ValidateMiddleware(DayDto)],
@@ -54,8 +54,8 @@ export class DayController extends BaseController implements IDayController {
 
 	async getDaysController(req: Request, res: Response, next: NextFunction): Promise<void> {
 		try {
-			const user = req.user as { id: number };
-			const userId = user.id;
+			const user = req.user as { id?: number } | undefined;
+			const userId = user?.id;
 			const programId = parseInt(req.params.programId, 10);
 
 			if (!userId) {
@@ -78,8 +78,8 @@ export class DayController extends BaseController implements IDayController {
 	async createDayController(req: Request, res: Response, next: NextFunction): Promise<void> {
 		try {
 			const dayDto: DayDto = req.body;
-			const user = req.user as { id: number };
-			const userId = user.id;
+			const user = req.user as { id?: number } | undefined;
+			const userId = user?.id;
 			const programId = parseInt(req.params.programId, 10);
 
 			if (!userId) {
@@ -90,7 +90,7 @@ export class DayController extends BaseController implements IDayController {
 				return next(new HTTPError(400, 'Invalid program ID'));
 			}
 
-			const result = await this.dayService.createDayService(dayDto, programId, userId);
+			const result = await this.dayService.createDayService(programId, userId, dayDto);
 			this.loggerService.info(`User ${userId} created a day in program ${programId}.`);
 			this.ok(res, result);
 		} catch (error: any) {
@@ -102,8 +102,8 @@ export class DayController extends BaseController implements IDayController {
 	async updateDayController(req: Request, res: Response, next: NextFunction): Promise<void> {
 		try {
 			const dayDto: DayDto = req.body;
-			const user = req.user as { id: number };
-			const userId = user.id;
+			const user = req.user as { id?: number } | undefined;
+			const userId = user?.id;
 			const programId = parseInt(req.params.programId, 10);
 			const dayId = parseInt(req.params.dayId, 10);
 
@@ -114,7 +114,7 @@ export class DayController extends BaseController implements IDayController {
 				return next(new HTTPError(400, 'Invalid program or day ID'));
 			}
 
-			const updatedDay = await this.dayService.updateDayService(dayDto, programId, dayId, userId);
+			const updatedDay = await this.dayService.updateDayService(programId, dayId, userId, dayDto);
 			this.loggerService.info(`User ${userId} updated day with ID ${dayId} in program with ID ${programId}.`);
 			this.ok(res, updatedDay);
 		} catch (error: any) {
@@ -125,8 +125,8 @@ export class DayController extends BaseController implements IDayController {
 
 	async getDayController(req: Request, res: Response, next: NextFunction): Promise<void> {
 		try {
-			const user = req.user as { id: number };
-			const userId = user.id;
+			const user = req.user as { id?: number } | undefined;
+			const userId = user?.id;
 			const programId = parseInt(req.params.programId, 10);
 			const dayId = parseInt(req.params.dayId, 10);
 
@@ -149,8 +149,8 @@ export class DayController extends BaseController implements IDayController {
 
 	async deleteDayController(req: Request, res: Response, next: NextFunction): Promise<void> {
 		try {
-			const user = req.user as { id: number };
-			const userId = user.id;
+			const user = req.user as { id?: number } | undefined;
+			const userId = user?.id;
 			const programId = parseInt(req.params.programId, 10);
 			const dayId = parseInt(req.params.dayId, 10);
 
@@ -167,7 +167,7 @@ export class DayController extends BaseController implements IDayController {
 			this.loggerService.info(`User ${userId} deleted day with ID ${dayId} in program ${programId}.`);
 			this.ok(res, { message: 'Day deleted', dayId });
 		} catch (error) {
-			this.loggerService.error(`Error in deleteDayController`);
+			this.loggerService.error(`Error in deleteDayController: ${(error as Error).message}`);
 			next(error);
 		}
 	}

@@ -1,3 +1,5 @@
+import { ConsultationDto } from './dto/consultation.dto';
+
 export interface ITelegramService {
-	consultationService: (data: any) => Promise<{ success: boolean; message?: string }>;
+	sendConsultation: (data: ConsultationDto) => Promise<{ success: boolean; message: string }>;
 }

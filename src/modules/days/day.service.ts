@@ -1,11 +1,8 @@
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../types';
-import { IConfigService } from '../../config/config.service.interface';
 import { HTTPError } from '../../errors/http-error.class';
-import { PrismaService } from '../../database/prisma.service';
 import { IDayService } from './day.service.interface';
 import { IDayRepository } from './day.repository.interface';
-import { WorkoutDayModel } from '@prisma/client';
 import { DayDto } from './dto/day.dto';
 import { IProgramRepository } from '../programs/program.repository.interface';
 import { ILogger } from '../../log/logger.interface';
@@ -16,8 +13,6 @@ import { DayWithExercisesDto } from './dto/DayWithExercises.dto';
 export class DayService implements IDayService {
 	constructor(
 		@inject(TYPES.ILogger) private loggerService: ILogger,
-		@inject(TYPES.PrismaService) private prismaService: PrismaService,
-		@inject(TYPES.ConfigService) private configService: IConfigService,
 		@inject(TYPES.DayRepository) private dayRepository: IDayRepository,
 		@inject(TYPES.ProgramRepository) private programRepository: IProgramRepository,
 	) {}
@@ -30,7 +25,7 @@ export class DayService implements IDayService {
 				throw new HTTPError(404, 'Program not found');
 			}
 
-			const days = await this.dayRepository.getDaysRepository(programId, userId);
+			const days = await this.dayRepository.getDaysByProgramAndUser(programId, userId);
 			this.loggerService.info(`Retrieved ${days.length} days for program ${programId} and user ${userId}.`);
 
 			return days.map((day) => {
@@ -38,7 +33,7 @@ export class DayService implements IDayService {
 					id: day.id,
 					dayName: day.dayName,
 					muscle: day.muscle,
-					creationDate: day.creationDate.toISOString().split('T')[0].split('-').reverse().join('/'),
+					creationDate: day.creationDate.toISOString(),
 					workoutExercisesCount: day.exercises.length,
 				} as DayWithExercisesDto;
 			});
@@ -51,7 +46,7 @@ export class DayService implements IDayService {
 		}
 	}
 
-	async createDayService(dto: DayDto, programId: number, userId: number): Promise<DayWithExercisesDto> {
+	async createDayService(programId: number, userId: number, dto: DayDto): Promise<DayWithExercisesDto> {
 		try {
 			const program = await this.programRepository.findProgramById(programId, userId);
 			if (!program) {
@@ -59,14 +54,14 @@ export class DayService implements IDayService {
 				throw new HTTPError(404, 'Program not found');
 			}
 
-			const createdDay = await this.dayRepository.createDayRepository(dto, programId);
+			const createdDay = await this.dayRepository.createDay(programId, dto);
 			this.loggerService.info(`Day created with ID ${createdDay.id} in program ${programId} by user ${userId}.`);
 
 			return {
 				id: createdDay.id,
 				dayName: createdDay.dayName,
 				muscle: createdDay.muscle,
-				creationDate: createdDay.creationDate.toISOString().split('T')[0].split('-').reverse().join('/'),
+				creationDate: createdDay.creationDate.toISOString(),
 				workoutExercisesCount: createdDay.exercises ? createdDay.exercises.length : 0,
 			} as DayWithExercisesDto;
 		} catch (error: any) {
@@ -78,7 +73,7 @@ export class DayService implements IDayService {
 		}
 	}
 
-	async updateDayService(dto: DayDto, programId: number, dayId: number, userId: number): Promise<DayDto> {
+	async updateDayService(programId: number, dayId: number, userId: number, dto: DayDto): Promise<DayDto> {
 		try {
 			const program = await this.programRepository.findProgramById(programId, userId);
 			if (!program) {
@@ -86,7 +81,7 @@ export class DayService implements IDayService {
 				throw new HTTPError(404, 'Program not found');
 			}
 
-			const day = await this.dayRepository.findDayById(dayId, programId);
+			const day = await this.dayRepository.getDayByIdAndProgram(dayId, programId);
 			if (!day) {
 				this.loggerService.warn(`Day with ID ${dayId} not found in program ${programId}.`);
 				throw new HTTPError(404, 'Day not found');
@@ -95,7 +90,7 @@ export class DayService implements IDayService {
 			const dayEntity = new DayEntity(day.id, day.dayName, day.muscle, day.workoutProgramId);
 			dayEntity.update({ dayName: dto.dayName, muscle: dto.muscle });
 
-			const updatedDay = await this.dayRepository.updateDayRepository(dayEntity);
+			const updatedDay = await this.dayRepository.updateDay(dayEntity);
 			this.loggerService.info(`Day with ID ${dayId} updated by user ${userId}.`);
 
 			return {
@@ -112,7 +107,7 @@ export class DayService implements IDayService {
 		}
 	}
 
-	async getDayService(programId: number, dayId: number, userId: number): Promise<WorkoutDayModel> {
+	async getDayService(programId: number, dayId: number, userId: number): Promise<DayWithExercisesDto> {
 		try {
 			const program = await this.programRepository.findProgramById(programId, userId);
 			if (!program) {
@@ -120,14 +115,20 @@ export class DayService implements IDayService {
 				throw new HTTPError(404, 'Program not found');
 			}
 
-			const day = await this.dayRepository.getDayRepository(programId, dayId, userId);
+			const day = await this.dayRepository.getDayByIdAndUser(dayId, programId, userId);
 			if (!day) {
 				this.loggerService.warn(`Day with ID ${dayId} not found for user ${userId} in program ${programId}.`);
 				throw new HTTPError(404, 'Day not found');
 			}
 
 			this.loggerService.info(`User ${userId} retrieved day with ID ${dayId}.`);
-			return day;
+			return {
+				id: day.id,
+				dayName: day.dayName,
+				muscle: day.muscle,
+				creationDate: day.creationDate.toISOString(),
+				workoutExercisesCount: day.exercises.length,
+			} as DayWithExercisesDto;
 		} catch (error: any) {
 			if (error instanceof HTTPError) {
 				throw error;
@@ -145,13 +146,13 @@ export class DayService implements IDayService {
 				throw new HTTPError(404, 'Program not found');
 			}
 
-			const day = await this.dayRepository.findDayById(dayId, programId);
+			const day = await this.dayRepository.getDayByIdAndProgram(dayId, programId);
 			if (!day) {
 				this.loggerService.warn(`Day with ID ${dayId} not found in program ${programId}.`);
 				throw new HTTPError(404, 'Day not found');
 			}
 
-			await this.dayRepository.deleteDayRepository(dayId);
+			await this.dayRepository.deleteDay(dayId);
 			this.loggerService.info(`Day with ID ${dayId} and all related records deleted in program ${programId} for user ${userId}.`);
 		} catch (error: any) {
 			if (error instanceof HTTPError) {

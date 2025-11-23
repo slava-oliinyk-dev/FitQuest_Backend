@@ -1,43 +1,34 @@
 import { ITelegramService } from './telegram.service.interface';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../types';
-import { IConfigService } from '../../config/config.service.interface';
 import { ITelegramRepository } from './telegram.repository.interface';
 import { ILogger } from '../../log/logger.interface';
+import { ConsultationDto } from './dto/consultation.dto';
 
 @injectable()
 export class TelegramService implements ITelegramService {
 	constructor(
-		@inject(TYPES.ConfigService) private configService: IConfigService,
-		@inject(TYPES.TelegramRepository) private telegramRepository: ITelegramRepository,
-		@inject(TYPES.ILogger) private loggerService: ILogger,
+		@inject(TYPES.TelegramRepository) private readonly telegramRepository: ITelegramRepository,
+		@inject(TYPES.ILogger) private readonly loggerService: ILogger,
 	) {}
 
-	async consultationService(data: any): Promise<{ success: boolean; message?: string }> {
+	async sendConsultation(data: ConsultationDto): Promise<{ success: boolean; message: string }> {
 		const { email, name, message } = data;
 
-		if (!email || !name || !message) {
-			this.loggerService.error('[TelegramService] Missing required fields: email, name, or message');
-			return { success: false, message: 'Missing required fields: email, name, or message' };
-		}
-
-		const formattedMessage = `New Consultation Request:
-        Name: ${name}
-        Email: ${email}
-        Message: ${message}`;
-
+		const formattedMessage = `New Consultation Request:\nName: ${name}\nEmail: ${email}\nMessage: ${message}`;
 		try {
-			const result = await this.telegramRepository.consultationRepository({ message: formattedMessage });
+			const result = await this.telegramRepository.sendMessage(formattedMessage);
 
 			if (result.success) {
-				this.loggerService.info(`[TelegramService] Consultation message sent successfully for ${email}`);
+				this.loggerService.info(`[TelegramService] Consultation message sent successfully for ${email}.`);
 				return { success: true, message: 'Message sent successfully' };
 			}
-
-			this.loggerService.error(`[TelegramService] Error sending message to Telegram for ${email}`);
-			return { success: false, message: 'Error sending message to Telegram' };
+			const failureMessage = result.message || 'Error sending message to Telegram';
+			this.loggerService.warn(`[TelegramService] ${failureMessage} for ${email}.`);
+			return { success: false, message: failureMessage };
 		} catch (error: any) {
-			this.loggerService.error(`[TelegramService] Failed to send consultation message: ${error.message}`);
+			const errorMessage = error?.message || 'Unknown error';
+			this.loggerService.error(`[TelegramService] Failed to send consultation message: ${errorMessage}`);
 			return { success: false, message: 'Failed to send consultation message' };
 		}
 	}

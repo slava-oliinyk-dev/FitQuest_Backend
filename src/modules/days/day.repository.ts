@@ -6,18 +6,17 @@ import { WorkoutDayModel } from '@prisma/client';
 import { DayDto } from './dto/day.dto';
 import { DayEntity } from './entity/day.entity';
 import { DayWithExercise } from './types/DayWithExercise';
-import { DayWithExercisesDto } from './dto/DayWithExercises.dto';
 
 @injectable()
 export class DayRepository implements IDayRepository {
 	constructor(@inject(TYPES.PrismaService) private prismaService: PrismaService) {}
 
-	async getDaysRepository(programId: number, userId: number): Promise<DayWithExercise[]> {
+	async getDaysByProgramAndUser(programId: number, userId: number): Promise<DayWithExercise[]> {
 		return this.prismaService.client.workoutDayModel.findMany({
 			where: {
 				workoutProgramId: programId,
 				workoutProgram: {
-					userId: userId,
+					userId,
 				},
 			},
 			include: {
@@ -26,18 +25,16 @@ export class DayRepository implements IDayRepository {
 		});
 	}
 
-	async findDayByIdAndUser(dayId: number, userId: number): Promise<WorkoutDayModel | null> {
+	async getDayByIdAndProgram(dayId: number, programId: number): Promise<WorkoutDayModel | null> {
 		return this.prismaService.client.workoutDayModel.findFirst({
 			where: {
 				id: dayId,
-				workoutProgram: {
-					userId: userId,
-				},
+				workoutProgramId: programId,
 			},
 		});
 	}
 
-	async createDayRepository(dto: DayDto, programId: number): Promise<DayWithExercise> {
+	async createDay(programId: number, dto: DayDto): Promise<DayWithExercise> {
 		return this.prismaService.client.workoutDayModel.create({
 			data: {
 				dayName: dto.dayName,
@@ -50,16 +47,22 @@ export class DayRepository implements IDayRepository {
 		});
 	}
 
-	async findDayById(dayId: number, programId: number): Promise<WorkoutDayModel | null> {
+	async getDayByIdAndUser(dayId: number, programId: number, userId: number): Promise<DayWithExercise | null> {
 		return this.prismaService.client.workoutDayModel.findFirst({
 			where: {
 				id: dayId,
 				workoutProgramId: programId,
+				workoutProgram: {
+					userId,
+				},
+			},
+			include: {
+				exercises: true,
 			},
 		});
 	}
 
-	async updateDayRepository(entity: DayEntity): Promise<WorkoutDayModel> {
+	async updateDay(entity: DayEntity): Promise<WorkoutDayModel> {
 		return this.prismaService.client.workoutDayModel.update({
 			where: {
 				id_workoutProgramId: {
@@ -74,19 +77,7 @@ export class DayRepository implements IDayRepository {
 		});
 	}
 
-	async getDayRepository(programId: number, dayId: number, userId: number): Promise<WorkoutDayModel | null> {
-		return this.prismaService.client.workoutDayModel.findFirst({
-			where: {
-				id: dayId,
-				workoutProgramId: programId,
-				workoutProgram: {
-					userId: userId,
-				},
-			},
-		});
-	}
-
-	async deleteDayRepository(dayId: number): Promise<void> {
+	async deleteDay(dayId: number): Promise<void> {
 		await this.prismaService.client.workoutDayModel.delete({
 			where: { id: dayId },
 		});

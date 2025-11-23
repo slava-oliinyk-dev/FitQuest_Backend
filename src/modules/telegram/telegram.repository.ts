@@ -8,35 +8,29 @@ import { IConfigService } from '../../config/config.service.interface';
 
 @injectable()
 export class TelegramRepository implements ITelegramRepository {
-	private telegramApiUrl: string;
-	private chatId: string;
+	private readonly telegramApiUrl: string;
+	private readonly chatId: string;
 
 	constructor(
-		@inject(TYPES.ILogger) private loggerService: ILogger,
-		@inject(TYPES.ConfigService) private configService: IConfigService,
+		@inject(TYPES.ILogger) private readonly loggerService: ILogger,
+		@inject(TYPES.ConfigService) private readonly configService: IConfigService,
 	) {
-		this.telegramApiUrl = `https://api.telegram.org/bot${this.configService.get('TELEGRAM_BOT_TOKEN')}/sendMessage`;
+		const botToken = this.configService.get('TELEGRAM_BOT_TOKEN');
 		this.chatId = this.configService.get('TELEGRAM_CHAT_ID');
+		this.telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
 	}
-	async consultationRepository(data: any): Promise<{ success: boolean; message?: string }> {
+	async sendMessage(message: string): Promise<{ success: boolean; message?: string }> {
 		try {
-			const formattedMessage =
-				data.email && data.name && data.message
-					? `New Consultation Request:
-            Name: ${data.name}
-            Email: ${data.email}
-            Message: ${data.message}
-            Date: ${data.date || new Date().toLocaleString()}`
-					: data.message;
-
 			await axios.post(this.telegramApiUrl, {
 				chat_id: this.chatId,
-				text: formattedMessage,
+				text: message,
 			});
+			this.loggerService.info(`[TelegramRepository] Message delivered to chat ${this.chatId}.`);
 			return { success: true };
 		} catch (error: any) {
-			this.loggerService.error('Failed to send data to Telegram:', error);
-			return { success: false, message: 'Failed to send data to Telegram' };
+			const errorMessage = error?.response?.data?.description || error?.message || 'Unknown error';
+			this.loggerService.error(`[TelegramRepository] Failed to send data to Telegram: ${errorMessage}`);
+			return { success: false, message: `Failed to send data to Telegram: ${errorMessage}` };
 		}
 	}
 }
