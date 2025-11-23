@@ -29,5 +29,5 @@ export class UserDto {
 	@IsString({ message: 'Invalid bio' })
 	bio?: string;
 
-	provider!: 'LOCAL' | 'GOOGLE'; 
+	provider!: 'LOCAL' | 'GOOGLE';
 }

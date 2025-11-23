@@ -1,10 +1,11 @@
+import 'reflect-metadata';
 import { Strategy as JwtStrategy, ExtractJwt, StrategyOptions } from 'passport-jwt';
 import { PassportStatic } from 'passport';
 import { IConfigService } from './config.service.interface';
 import { IUserService } from '../modules/users/users.service.interface';
 import { TYPES } from '../types';
 import { inject, injectable } from 'inversify';
-import 'reflect-metadata';
+
 import { Request } from 'express';
 
 function cookieExtractor(req: Request): string | null {
@@ -33,17 +34,13 @@ export class PassportConfig {
 		passport.use(
 			new JwtStrategy(opts, async (jwtPayload, done) => {
 				try {
-					console.log('JWT Payload:', jwtPayload);
 					const user = await this.userService.getUserInfo(jwtPayload.email);
 					if (user) {
-						console.log('The user has been found:', user);
 						return done(null, { id: jwtPayload.id, email: user.email, role: user.role });
 					} else {
-						console.log('The user will not find by email:', jwtPayload.email);
 						return done(null, false);
 					}
 				} catch (error) {
-					console.error('Mistake in strategy Passport:', error);
 					return done(error, false);
 				}
 			}),

@@ -15,6 +15,8 @@ import { IUserService } from './users.service.interface';
 import { RoleMiddleware } from '../../common/role.middleware';
 import passport from 'passport';
 import { emailAdapter } from '../../utils/mailer';
+import { UserResponseDto } from './dto/user-response.dto';
+import { UserModel } from '@prisma/client';
 
 @injectable()
 export class UserController extends BaseController implements IUserController {
@@ -53,16 +55,16 @@ export class UserController extends BaseController implements IUserController {
 				method: 'get',
 				func: this.getUsers,
 				middlewares: [passport.authenticate('jwt', { session: false }), RoleMiddleware(['USER'])],
-			},	
+			},
 			{
 				path: '/email',
 				method: 'post',
 				func: this.email,
 			},
 			{
- 				path: '/firebase-redirect',
-  				method: 'get',
-  				func: this.firebaseRedirect,
+				path: '/firebase-redirect',
+				method: 'get',
+				func: this.firebaseRedirect,
 			},
 
 			{
@@ -76,9 +78,9 @@ export class UserController extends BaseController implements IUserController {
 				func: this.confirmEmail,
 			},
 			{
-  				path: '/firebase',
-  				method: 'post',
-  				func: this.firebaseAuth,
+				path: '/firebase',
+				method: 'post',
+				func: this.firebaseAuth,
 			},
 			{
 				path: '/:id',
@@ -94,31 +96,29 @@ export class UserController extends BaseController implements IUserController {
 			},
 		]);
 	}
-private getCookieOptions() {
-  return {
-    httpOnly: true,
-    secure: true,          
-    sameSite: 'none' as const,  
-    path: '/',
-  };
-}
-
-
+	private getCookieOptions() {
+		return {
+			httpOnly: true,
+			secure: true,
+			sameSite: 'none' as const,
+			path: '/',
+		};
+	}
 
 	async register(req: Request, res: Response, next: NextFunction): Promise<void> {
-	 try {
-    const dto: UserDto = {
-      email: req.body.email,
-      name: req.body.name,
-      uniqueLogin: req.body.uniqueLogin,
-      password: req.body.password,
-      role: req.body.role,
-      photo: req.body.photo,
-      bio: req.body.bio,
-      provider: 'LOCAL',          
-    };
+		try {
+			const dto: UserDto = {
+				email: req.body.email,
+				name: req.body.name,
+				uniqueLogin: req.body.uniqueLogin,
+				password: req.body.password,
+				role: req.body.role,
+				photo: req.body.photo,
+				bio: req.body.bio,
+				provider: 'LOCAL',
+			};
 
-    const result = await this.userService.createUser(dto);
+			const result = await this.userService.createUser(dto);
 			if (!result) {
 				this.loggerService.warn(`User with email ${req.body.email} or unique login ${req.body.uniqueLogin} already exists.`);
 				return next(new HTTPError(422, 'User with this email or unique login already exists'));
@@ -139,10 +139,10 @@ private getCookieOptions() {
 		try {
 			const result = await this.userService.validateUser(req.body);
 			const jwt = await this.signJWT(result!.id, result!.email, this.configService.get('SECRET'));
-		      res.cookie('token', jwt, {
-        ...this.getCookieOptions(),
-        maxAge: 24 * 60 * 60 * 1000, 
-      });
+			res.cookie('token', jwt, {
+				...this.getCookieOptions(),
+				maxAge: 24 * 60 * 60 * 1000,
+			});
 			this.loggerService.info(`User with ID ${result!.id} successfully logged in.`);
 			this.ok(res, 'Ales good');
 		} catch (error) {
@@ -151,89 +151,87 @@ private getCookieOptions() {
 	}
 
 	async firebaseAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      return next(new HTTPError(401, 'No Firebase ID token provided'));
-    }
-    const idToken = authHeader.split(' ')[1];
-    const decoded = await admin.auth().verifyIdToken(idToken);
-    const email = decoded.email!;
-    const name = decoded.name || 'Firebase User';
+		try {
+			const authHeader = req.headers.authorization;
+			if (!authHeader?.startsWith('Bearer ')) {
+				return next(new HTTPError(401, 'No Firebase ID token provided'));
+			}
+			const idToken = authHeader.split(' ')[1];
+			const decoded = await admin.auth().verifyIdToken(idToken);
+			const email = decoded.email!;
+			const name = decoded.name || 'Firebase User';
 
-    let user = await this.userService.getUserInfo(email);
-    if (!user) {
-		 const dto: UserDto = {
-        email,
-        name,
-        uniqueLogin: `${email.split('@')[0]}_${Date.now()}`,
-        password: undefined,
-        role: 'USER',
-        provider: 'GOOGLE',  
-      };
-    user = await this.userService.createUser(dto);
-      if (!user) {
-        return next(new HTTPError(500, 'Error creating user'));
-      }
-    }
-    const jwt = await this.signJWT(user.id, user.email, this.configService.get('SECRET'));
-	   res.cookie('token', jwt, {
-        ...this.getCookieOptions(),
-        maxAge: 24 * 60 * 60 * 1000,
-      });
+			let user = await this.userService.getUserInfo(email);
+			if (!user) {
+				const dto: UserDto = {
+					email,
+					name,
+					uniqueLogin: `${email.split('@')[0]}_${Date.now()}`,
+					password: undefined,
+					role: 'USER',
+					provider: 'GOOGLE',
+				};
+				user = await this.userService.createUser(dto);
+				if (!user) {
+					return next(new HTTPError(500, 'Error creating user'));
+				}
+			}
+			const jwt = await this.signJWT(user.id, user.email, this.configService.get('SECRET'));
+			res.cookie('token', jwt, {
+				...this.getCookieOptions(),
+				maxAge: 24 * 60 * 60 * 1000,
+			});
 
-    this.ok(res, {
-      id: user.id,
-      email: user.email,
-      uniqueLogin: user.uniqueLogin,
-      role: user.role,
-      photo: user.photo,
-    });
-  } catch (err: any) {
-    next(new HTTPError(401, `Firebase auth error: ${err.message}`));
-  }
-}
+			this.ok(res, {
+				id: user.id,
+				email: user.email,
+				uniqueLogin: user.uniqueLogin,
+				role: user.role,
+				photo: user.photo,
+			});
+		} catch (err: any) {
+			next(new HTTPError(401, `Firebase auth error: ${err.message}`));
+		}
+	}
 
-async firebaseRedirect(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const idToken = String(req.query.token);
-    const redirect = String(req.query.redirect || '/');
-    const decoded = await admin.auth().verifyIdToken(idToken);
-    const email = decoded.email!;
-    let user = await this.userService.getUserInfo(email);
-    if (!user) {
-      const dto: UserDto = {
-        email,
-        name: decoded.name || 'Firebase User',
-        uniqueLogin: `${email.split('@')[0]}_${Date.now()}`,
-        password: undefined,
-        role: 'USER',
-        provider: 'GOOGLE',  
-      };
+	async firebaseRedirect(req: Request, res: Response, next: NextFunction): Promise<void> {
+		try {
+			const idToken = String(req.query.token);
+			const redirect = String(req.query.redirect || '/');
+			const decoded = await admin.auth().verifyIdToken(idToken);
+			const email = decoded.email!;
+			let user = await this.userService.getUserInfo(email);
+			if (!user) {
+				const dto: UserDto = {
+					email,
+					name: decoded.name || 'Firebase User',
+					uniqueLogin: `${email.split('@')[0]}_${Date.now()}`,
+					password: undefined,
+					role: 'USER',
+					provider: 'GOOGLE',
+				};
 
-      user = await this.userService.createUser(dto);
-	   if (!user) {
-        return next(new HTTPError(500, 'Error creating user'));
-      }
-    }
-    const jwt = await this.signJWT(user.id, user.email, this.configService.get('SECRET'));
-    res.cookie('token', jwt, {
-      ...this.getCookieOptions(),
-      maxAge: 24 * 60 * 60 * 1000,
-    });
-    res.redirect(redirect);
-  } catch (err: any) {
-    next(new HTTPError(401, `Firebase redirect error: ${err.message}`));
-  }
-}
-
+				user = await this.userService.createUser(dto);
+				if (!user) {
+					return next(new HTTPError(500, 'Error creating user'));
+				}
+			}
+			const jwt = await this.signJWT(user.id, user.email, this.configService.get('SECRET'));
+			res.cookie('token', jwt, {
+				...this.getCookieOptions(),
+				maxAge: 24 * 60 * 60 * 1000,
+			});
+			res.redirect(redirect);
+		} catch (err: any) {
+			next(new HTTPError(401, `Firebase redirect error: ${err.message}`));
+		}
+	}
 
 	async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
-
 		try {
-		   res.clearCookie('token', this.getCookieOptions());
+			res.clearCookie('token', this.getCookieOptions());
 			this.loggerService.info(`The user has successfully logged out.`);
-			this.ok(res, 'Logout successful')
+			this.ok(res, 'Logout successful');
 		} catch (error) {
 			next(error);
 		}
@@ -273,9 +271,8 @@ async firebaseRedirect(req: Request, res: Response, next: NextFunction): Promise
 
 	async getUsers(req: Request, res: Response, next: NextFunction): Promise<void> {
 		try {
-			const result = await this.userService.getAllUsers();
-			this.loggerService.info(`Retrieved all users. Count: ${result.length}.`);
-			this.ok(res, result);
+			const dtos: UserResponseDto[] = await this.userService.getAllUsers();
+			this.ok(res, dtos);
 		} catch (error) {
 			next(error);
 		}
@@ -287,13 +284,12 @@ async firebaseRedirect(req: Request, res: Response, next: NextFunction): Promise
 			if (isNaN(id)) {
 				return next(new HTTPError(400, 'Invalid identifier'));
 			}
-			const result = await this.userService.getUserById(id);
-			if (!result) {
+			const dto = await this.userService.getUserById(id);
+			if (!dto) {
 				this.loggerService.warn(`User with ID ${id} not found.`);
 				return next(new HTTPError(404, 'User not found'));
 			}
-			this.loggerService.info(`Retrieved user with ID ${id}.`);
-			this.ok(res, result);
+			this.ok(res, dto);
 		} catch (error) {
 			next(error);
 		}
@@ -343,7 +339,16 @@ async firebaseRedirect(req: Request, res: Response, next: NextFunction): Promise
 			if (!req.user) {
 				return next(new HTTPError(401, 'Not authenticated'));
 			}
-			this.ok(res, { user: req.user });
+			const u = req.user as UserModel;
+			const dto = new UserResponseDto({
+				id: u.id,
+				email: u.email,
+				uniqueLogin: u.uniqueLogin,
+				role: u.role,
+				photo: u.photo,
+				bio: u.bio,
+			});
+			this.ok(res, dto);
 		} catch (error) {
 			next(error);
 		}

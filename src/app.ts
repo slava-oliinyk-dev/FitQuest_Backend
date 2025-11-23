@@ -2,7 +2,7 @@ import express, { Express } from 'express';
 import cors from 'cors';
 import { Server } from 'http';
 import cookieParser from 'cookie-parser';
-import * as admin from 'firebase-admin'; 
+import * as admin from 'firebase-admin';
 import { UserController } from './modules/users/user.controller';
 import { inject, injectable } from 'inversify';
 import { TYPES } from './types';
@@ -17,6 +17,7 @@ import { ProgramController } from './modules/programs/program.controller';
 import { DayController } from './modules/days/day.controller';
 import { ExerciseController } from './modules/exercises/exercise.controller';
 import { TelegramController } from './modules/telegram/telegram.controller';
+import path from 'path';
 
 @injectable()
 export class App {
@@ -50,11 +51,12 @@ export class App {
 		this.app.use(express.json());
 		this.app.options('*', cors());
 
-		const serviceAccount = JSON.parse(
-      	this.configService.get('FIREBASE_SERVICE_ACCOUNT'));
-    	admin.initializeApp({
-      	credential: admin.credential.cert(serviceAccount),
-    });
+		this.app.use(express.static(path.join(__dirname, '..', 'public')));
+
+		const serviceAccount = JSON.parse(this.configService.get('FIREBASE_SERVICE_ACCOUNT'));
+		admin.initializeApp({
+			credential: admin.credential.cert(serviceAccount),
+		});
 
 		this.passportConfig.initialize(passport);
 		this.app.use(passport.initialize());
@@ -68,9 +70,11 @@ export class App {
 		this.app.use('/exercise', this.exerciseController.router);
 		this.app.use('/telegram', this.telegramController.router);
 	}
+
 	useExeptionFilters(): void {
 		this.app.use(this.exeptionFilter.catch.bind(this.exeptionFilter));
 	}
+
 	public async init(): Promise<void> {
 		this.app.get('/health', (_req, res) => res.status(200).json({ status: 'ok' }));
 		this.useRoutes();
