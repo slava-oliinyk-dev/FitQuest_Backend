@@ -28,47 +28,38 @@ export class UsersRepository implements IUsersRepository {
 		});
 	}
 
-	async createEmailConfirmation(emailConfirmation: { confirmationCode: string; expirationDate: Date; isConfirmed: boolean; userId: number }): Promise<EmailConfirmation> {
+	async createEmailConfirmation(params: { userId: number; confirmationCode: string; expirationDate: Date; isConfirmed: boolean }): Promise<EmailConfirmation> {
 		return this.prismaService.client.emailConfirmation.create({
+			data: params,
+		});
+	}
+
+	async updateEmailConfirmationByUserId(params: { userId: number; confirmationCode: string; expirationDate: Date; isConfirmed: boolean }): Promise<EmailConfirmation> {
+		return this.prismaService.client.emailConfirmation.update({
+			where: { userId: params.userId },
 			data: {
-				confirmationCode: emailConfirmation.confirmationCode,
-				expirationDate: emailConfirmation.expirationDate,
-				isConfirmed: emailConfirmation.isConfirmed,
-				userId: emailConfirmation.userId,
+				confirmationCode: params.confirmationCode,
+				expirationDate: params.expirationDate,
+				isConfirmed: params.isConfirmed,
 			},
 		});
 	}
 
-	async findByUniqueLogin(uniqueLogin: string): Promise<UserModel | null> {
-		return this.prismaService.client.userModel.findFirst({
+	async updateEmailConfirmation(code: string): Promise<EmailConfirmation> {
+		return this.prismaService.client.emailConfirmation.update({
+			where: { confirmationCode: code },
+			data: { isConfirmed: true },
+		});
+	}
+
+	async findIsConfirmed(email: string): Promise<boolean> {
+		const record = await this.prismaService.client.emailConfirmation.findFirst({
 			where: {
-				uniqueLogin,
+				isConfirmed: true,
+				user: { email },
 			},
 		});
-	}
-
-	async findByEmail(email: string): Promise<UserModel | null> {
-		return this.prismaService.client.userModel.findFirst({
-			where: {
-				email,
-			},
-		});
-	}
-
-	async getAll(): Promise<UserModel[]> {
-		return this.prismaService.client.userModel.findMany();
-	}
-
-	async getById(id: number): Promise<UserModel | null> {
-		return this.prismaService.client.userModel.findUnique({
-			where: { id },
-		});
-	}
-
-	async deleteById(id: number): Promise<UserModel | null> {
-		return this.prismaService.client.userModel.delete({
-			where: { id },
-		});
+		return Boolean(record);
 	}
 
 	async confirmEmail(code: string): Promise<(EmailConfirmation & { user: UserModel }) | null> {
@@ -83,29 +74,29 @@ export class UsersRepository implements IUsersRepository {
 		return this.prismaService.client.emailConfirmation.findFirst({
 			where: {
 				confirmationCode: code,
-				expirationDate: {
-					gte: now,
-				},
+				expirationDate: { gte: now },
 			},
 			include: { user: true },
 		});
 	}
 
-	async updateEmailConfirmation(code: string, data: { isConfirmed: boolean }): Promise<EmailConfirmation | null> {
-		return this.prismaService.client.emailConfirmation.update({
-			where: { confirmationCode: code },
-			data: { isConfirmed: true },
-		});
+	async findByUniqueLogin(uniqueLogin: string): Promise<UserModel | null> {
+		return this.prismaService.client.userModel.findFirst({ where: { uniqueLogin } });
 	}
 
-	async findIsConfirmed(email: string): Promise<EmailConfirmation | null> {
-		return this.prismaService.client.emailConfirmation.findFirst({
-			where: {
-				isConfirmed: true,
-				user: {
-					email: email,
-				},
-			},
-		});
+	async findByEmail(email: string): Promise<UserModel | null> {
+		return this.prismaService.client.userModel.findFirst({ where: { email } });
+	}
+
+	async getAll(): Promise<UserModel[]> {
+		return this.prismaService.client.userModel.findMany();
+	}
+
+	async getById(id: number): Promise<UserModel | null> {
+		return this.prismaService.client.userModel.findUnique({ where: { id } });
+	}
+
+	async deleteById(id: number): Promise<UserModel | null> {
+		return this.prismaService.client.userModel.delete({ where: { id } });
 	}
 }

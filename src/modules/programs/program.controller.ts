@@ -26,19 +26,25 @@ export class ProgramController extends BaseController implements IProgramControl
 				middlewares: [passport.authenticate('jwt', { session: false })],
 			},
 			{
+				path: '/:programId',
+				method: 'get',
+				func: this.getProgramController,
+				middlewares: [passport.authenticate('jwt', { session: false })],
+			},
+			{
 				path: '/',
 				method: 'post',
 				func: this.createProgramController,
 				middlewares: [passport.authenticate('jwt', { session: false }), new ValidateMiddleware(ProgramDto)],
 			},
 			{
-				path: '/:ProgramId',
+				path: '/:programId',
 				method: 'put',
 				func: this.updateProgramController,
 				middlewares: [passport.authenticate('jwt', { session: false }), new ValidateMiddleware(ProgramDto)],
 			},
 			{
-				path: '/:ProgramId',
+				path: '/:programId',
 				method: 'delete',
 				func: this.deleteProgramController,
 				middlewares: [passport.authenticate('jwt', { session: false })],
@@ -48,8 +54,8 @@ export class ProgramController extends BaseController implements IProgramControl
 
 	async getProgramsController(req: Request, res: Response, next: NextFunction): Promise<void> {
 		try {
-			const user = req.user as { id: number };
-			const userId = user.id;
+			const user = req.user as { id?: number } | undefined;
+			const userId = user?.id;
 			if (!userId) {
 				return next(new HTTPError(401, 'Unauthorized'));
 			}
@@ -65,8 +71,8 @@ export class ProgramController extends BaseController implements IProgramControl
 	async createProgramController(req: Request, res: Response, next: NextFunction): Promise<void> {
 		try {
 			const programDto: ProgramDto = req.body;
-			const user = req.user as { id: number };
-			const userId = user.id;
+			const user = req.user as { id?: number } | undefined;
+			const userId = user?.id;
 			if (!userId) {
 				return next(new HTTPError(401, 'Unauthorized'));
 			}
@@ -82,9 +88,9 @@ export class ProgramController extends BaseController implements IProgramControl
 	async updateProgramController(req: Request, res: Response, next: NextFunction): Promise<void> {
 		try {
 			const programDto: ProgramDto = req.body;
-			const user = req.user as { id: number };
-			const userId = user.id;
-			const programId = parseInt(req.params.ProgramId, 10);
+			const user = req.user as { id?: number } | undefined;
+			const userId = user?.id;
+			const programId = parseInt(req.params.programId, 10);
 
 			if (!userId) {
 				return next(new HTTPError(401, 'Unauthorized'));
@@ -105,9 +111,9 @@ export class ProgramController extends BaseController implements IProgramControl
 
 	async getProgramController(req: Request, res: Response, next: NextFunction): Promise<void> {
 		try {
-			const user = req.user as { id: number };
-			const userId = user.id;
-			const programId = parseInt(req.params.ProgramId, 10);
+			const user = req.user as { id?: number } | undefined;
+			const userId = user?.id;
+			const programId = parseInt(req.params.programId, 10);
 
 			if (!userId) {
 				return next(new HTTPError(401, 'Unauthorized'));
@@ -128,9 +134,9 @@ export class ProgramController extends BaseController implements IProgramControl
 
 	async deleteProgramController(req: Request, res: Response, next: NextFunction): Promise<void> {
 		try {
-			const user = req.user as { id: number };
-			const userId = user.id;
-			const programId = parseInt(req.params.ProgramId, 10);
+			const user = req.user as { id?: number } | undefined;
+			const userId = user?.id;
+			const programId = parseInt(req.params.programId, 10);
 
 			if (!userId) {
 				return next(new HTTPError(401, 'Unauthorized'));
@@ -147,7 +153,8 @@ export class ProgramController extends BaseController implements IProgramControl
 			}
 			this.loggerService.info(`Program with ID ${programId} deleted.`);
 			this.ok(res, { message: 'Program deleted', programId });
-		} catch (error) {
+		} catch (error: any) {
+			this.loggerService.error(`Error in deleteProgramController: ${error.message}`);
 			next(error);
 		}
 	}
