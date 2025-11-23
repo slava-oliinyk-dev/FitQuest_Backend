@@ -9,41 +9,44 @@ import { inject, injectable } from 'inversify';
 import { Request } from 'express';
 
 function cookieExtractor(req: Request): string | null {
-	let token = null;
-	if (req && req.cookies) {
-		token = req.cookies['token'];
-	}
-	return token;
+  let token = null;
+  if (req && req.cookies) {
+    token = req.cookies['token'];
+  }
+  return token;
 }
 
 @injectable()
 export class PassportConfig {
-	constructor(
-		@inject(TYPES.ConfigService) private configService: IConfigService,
-		@inject(TYPES.UserService) private userService: IUserService,
-	) {}
+  constructor(
+    @inject(TYPES.ConfigService) private configService: IConfigService,
+    @inject(TYPES.UserService) private userService: IUserService,
+  ) {}
 
-	public initialize(passport: PassportStatic): void {
-		const jwtFromRequest = ExtractJwt.fromExtractors([ExtractJwt.fromAuthHeaderAsBearerToken(), cookieExtractor]);
+  public initialize(passport: PassportStatic): void {
+    const jwtFromRequest = ExtractJwt.fromExtractors([
+      ExtractJwt.fromAuthHeaderAsBearerToken(),
+      cookieExtractor,
+    ]);
 
-		const opts: StrategyOptions = {
-			jwtFromRequest,
-			secretOrKey: this.configService.get('SECRET'),
-		};
+    const opts: StrategyOptions = {
+      jwtFromRequest,
+      secretOrKey: this.configService.get('SECRET'),
+    };
 
-		passport.use(
-			new JwtStrategy(opts, async (jwtPayload, done) => {
-				try {
-					const user = await this.userService.getUserInfo(jwtPayload.email);
-					if (user) {
-						return done(null, { id: jwtPayload.id, email: user.email, role: user.role });
-					} else {
-						return done(null, false);
-					}
-				} catch (error) {
-					return done(error, false);
-				}
-			}),
-		);
-	}
+    passport.use(
+      new JwtStrategy(opts, async (jwtPayload, done) => {
+        try {
+          const user = await this.userService.getUserInfo(jwtPayload.email);
+          if (user) {
+            return done(null, { id: jwtPayload.id, email: user.email, role: user.role });
+          } else {
+            return done(null, false);
+          }
+        } catch (error) {
+          return done(error, false);
+        }
+      }),
+    );
+  }
 }

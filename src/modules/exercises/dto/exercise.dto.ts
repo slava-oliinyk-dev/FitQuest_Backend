@@ -1,33 +1,33 @@
 import { IsString, IsInt, IsOptional, IsNumber, IsNotEmpty } from 'class-validator';
 
 export class ExerciseDto {
-	@IsOptional()
-	@IsInt({ message: 'Exercise id must be an integer' })
-	id?: number;
+  @IsOptional()
+  @IsInt({ message: 'Exercise id must be an integer' })
+  id?: number;
 
-	@IsString({ message: 'Exercise name is required' })
-	@IsNotEmpty({ message: 'Exercise name must not be empty' })
-	name: string;
+  @IsString({ message: 'Exercise name is required' })
+  @IsNotEmpty({ message: 'Exercise name must not be empty' })
+  name: string;
 
-	@IsInt({ message: 'Sets must be an integer' })
-	sets: number;
+  @IsInt({ message: 'Sets must be an integer' })
+  sets: number;
 
-	@IsInt({ message: 'Repetitions must be an integer' })
-	repetitions: number;
+  @IsInt({ message: 'Repetitions must be an integer' })
+  repetitions: number;
 
-	@IsOptional()
-	@IsNumber({}, { message: 'Weight must be a number' })
-	weight?: number | null;
+  @IsOptional()
+  @IsNumber({}, { message: 'Weight must be a number' })
+  weight?: number | null;
 
-	@IsOptional()
-	@IsInt({ message: 'Rest time must be an integer' })
-	restTime?: number | null;
+  @IsOptional()
+  @IsInt({ message: 'Rest time must be an integer' })
+  restTime?: number | null;
 
-	@IsOptional()
-	@IsString({ message: 'Note must be a string' })
-	note?: string | null;
+  @IsOptional()
+  @IsString({ message: 'Note must be a string' })
+  note?: string | null;
 
-	@IsOptional()
-	@IsString({ message: 'Progress mark must be a string' })
-	progressMark?: string | null;
+  @IsOptional()
+  @IsString({ message: 'Progress mark must be a string' })
+  progressMark?: string | null;
 }

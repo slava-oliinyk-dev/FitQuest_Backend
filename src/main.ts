@@ -41,41 +41,41 @@ import { TelegramService } from './modules/telegram/telegram.service';
 import { TelegramController } from './modules/telegram/telegram.controller';
 
 export const appBindings = new ContainerModule((bind: interfaces.Bind) => {
-	bind<ILogger>(TYPES.ILogger).to(LoggerService).inSingletonScope();
-	bind<IExeptionFilter>(TYPES.ExeptionFilter).to(ExeptionFilter);
-	bind<PrismaService>(TYPES.PrismaService).to(PrismaService).inSingletonScope();
-	bind<IConfigService>(TYPES.ConfigService).to(ConfigService).inSingletonScope();
-	bind<PassportConfig>(TYPES.PassportConfig).to(PassportConfig);
+  bind<ILogger>(TYPES.ILogger).to(LoggerService).inSingletonScope();
+  bind<IExeptionFilter>(TYPES.ExeptionFilter).to(ExeptionFilter);
+  bind<PrismaService>(TYPES.PrismaService).to(PrismaService).inSingletonScope();
+  bind<IConfigService>(TYPES.ConfigService).to(ConfigService).inSingletonScope();
+  bind<PassportConfig>(TYPES.PassportConfig).to(PassportConfig);
 
-	bind<IUserController>(TYPES.UserController).to(UserController);
-	bind<IUserService>(TYPES.UserService).to(UserService);
-	bind<IUsersRepository>(TYPES.UsersRepository).to(UsersRepository).inSingletonScope();
+  bind<IUserController>(TYPES.UserController).to(UserController);
+  bind<IUserService>(TYPES.UserService).to(UserService);
+  bind<IUsersRepository>(TYPES.UsersRepository).to(UsersRepository).inSingletonScope();
 
-	bind<IProgramController>(TYPES.ProgramController).to(ProgramController);
-	bind<IProgramService>(TYPES.ProgramService).to(ProgramService);
-	bind<IProgramRepository>(TYPES.ProgramRepository).to(ProgramRepository).inSingletonScope();
+  bind<IProgramController>(TYPES.ProgramController).to(ProgramController);
+  bind<IProgramService>(TYPES.ProgramService).to(ProgramService);
+  bind<IProgramRepository>(TYPES.ProgramRepository).to(ProgramRepository).inSingletonScope();
 
-	bind<IDayController>(TYPES.DayController).to(DayController);
-	bind<IDayService>(TYPES.DayService).to(DayService);
-	bind<IDayRepository>(TYPES.DayRepository).to(DayRepository).inSingletonScope();
+  bind<IDayController>(TYPES.DayController).to(DayController);
+  bind<IDayService>(TYPES.DayService).to(DayService);
+  bind<IDayRepository>(TYPES.DayRepository).to(DayRepository).inSingletonScope();
 
-	bind<IExerciseController>(TYPES.ExerciseController).to(ExerciseController);
-	bind<IExerciseService>(TYPES.ExerciseService).to(ExerciseService);
-	bind<IExerciseRepository>(TYPES.ExerciseRepository).to(ExerciseRepository).inSingletonScope();
+  bind<IExerciseController>(TYPES.ExerciseController).to(ExerciseController);
+  bind<IExerciseService>(TYPES.ExerciseService).to(ExerciseService);
+  bind<IExerciseRepository>(TYPES.ExerciseRepository).to(ExerciseRepository).inSingletonScope();
 
-	bind<ITelegramRepository>(TYPES.TelegramRepository).to(TelegramRepository).inSingletonScope();
-	bind<ITelegramService>(TYPES.TelegramService).to(TelegramService);
-	bind<ITelegramController>(TYPES.TelegramController).to(TelegramController);
+  bind<ITelegramRepository>(TYPES.TelegramRepository).to(TelegramRepository).inSingletonScope();
+  bind<ITelegramService>(TYPES.TelegramService).to(TelegramService);
+  bind<ITelegramController>(TYPES.TelegramController).to(TelegramController);
 
-	bind<App>(TYPES.Application).to(App);
+  bind<App>(TYPES.Application).to(App);
 });
 
 function bootstrap() {
-	const appContainer = new Container();
-	appContainer.load(appBindings);
-	const app = appContainer.get<App>(TYPES.Application);
-	app.init();
-	return { appContainer, app };
+  const appContainer = new Container();
+  appContainer.load(appBindings);
+  const app = appContainer.get<App>(TYPES.Application);
+  app.init();
+  return { appContainer, app };
 }
 
 export const { app, appContainer } = bootstrap();
