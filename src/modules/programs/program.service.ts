@@ -43,7 +43,6 @@ export class ProgramService implements IProgramService {
 		try {
 			const createdProgram = await this.programRepository.createProgramRepository(dto, userId);
 			this.loggerService.info(`Program created with ID ${createdProgram.id} by user ${userId}.`);
-			const formattedDate = createdProgram.creationDate.toLocaleDateString('en-US');
 			return {
 				id: createdProgram.id,
 				title: createdProgram.title,
