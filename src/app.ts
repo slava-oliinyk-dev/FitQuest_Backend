@@ -3,7 +3,7 @@ import cors from 'cors';
 import { Server } from 'http';
 import cookieParser from 'cookie-parser';
 import * as admin from 'firebase-admin';
-import { UserController } from './modules/users/user.controller';
+import { UserController } from './modules/users/users.controller';
 import { inject, injectable } from 'inversify';
 import { TYPES } from './types';
 import { ILogger } from './log/logger.interface';
@@ -39,13 +39,11 @@ export class App {
   ) {
     this.app = express();
 
+    const corsOrigins = this.getCorsOrigins();
+
     this.app.use(
       cors({
-        origin: [
-          'http://localhost:3000',
-          'https://fitness-web-frontend.vercel.app',
-          'https://fitness-web-frontend-bjly2jxps-viacheslavols-projects.vercel.app',
-        ],
+        origin: corsOrigins,
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization'],
@@ -65,6 +63,14 @@ export class App {
     this.passportConfig.initialize(passport);
     this.app.use(passport.initialize());
     this.port = Number(this.configService.get('PORT')) || 3003;
+  }
+
+  private getCorsOrigins(): string[] {
+    const origins = this.configService.get('CORS_ALLOWED_ORIGINS');
+    return origins
+      .split(',')
+      .map((o) => o.trim())
+      .filter((o) => o.length > 0);
   }
 
   private useRoutes(): void {

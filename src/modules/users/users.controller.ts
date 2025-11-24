@@ -1,11 +1,10 @@
+import 'reflect-metadata';
 import { Request, Response, NextFunction } from 'express';
 import { BaseController } from '../../common/base.controller';
 import { IUserController } from './user.controller.interface';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../types';
 import { ILogger } from '../../log/logger.interface';
-import 'reflect-metadata';
-import { UserDto } from './dto/user.dto';
 import * as admin from 'firebase-admin';
 import { HTTPError } from '../../errors/http-error.class';
 import { ValidateMiddleware } from '../../common/validate.middleware';
@@ -17,6 +16,11 @@ import passport from 'passport';
 import { emailAdapter } from '../../utils/mailer';
 import { UserResponseDto } from './dto/user-response.dto';
 import { UserModel } from '@prisma/client';
+import { RegisterUserDto } from './dto/register-user.dto';
+import { LoginUserDto } from './dto/login-user.dto';
+import { ReEmailDto } from './dto/re-email.dto';
+import { EmailRequestDto } from './dto/email-request.dto';
+import { UserDto } from './dto/user.dto';
 
 @injectable()
 export class UserController extends BaseController implements IUserController {
@@ -31,13 +35,13 @@ export class UserController extends BaseController implements IUserController {
         path: '/register',
         method: 'post',
         func: this.register,
-        middlewares: [new ValidateMiddleware(UserDto)],
+        middlewares: [new ValidateMiddleware(RegisterUserDto)],
       },
       {
         path: '/login',
         method: 'post',
         func: this.login,
-        middlewares: [new ValidateMiddleware(UserDto)],
+        middlewares: [new ValidateMiddleware(LoginUserDto)],
       },
       {
         path: '/logout',
@@ -60,6 +64,7 @@ export class UserController extends BaseController implements IUserController {
         path: '/email',
         method: 'post',
         func: this.email,
+        middlewares: [new ValidateMiddleware(EmailRequestDto)],
       },
       {
         path: '/firebase-redirect',
@@ -71,6 +76,7 @@ export class UserController extends BaseController implements IUserController {
         path: '/re-email',
         method: 'post',
         func: this.reEmail,
+        middlewares: [new ValidateMiddleware(ReEmailDto)],
       },
       {
         path: '/confirm-email/:code',
@@ -107,25 +113,29 @@ export class UserController extends BaseController implements IUserController {
 
   async register(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      const body = req.body as RegisterUserDto;
       const dto: UserDto = {
-        email: req.body.email,
-        name: req.body.name,
-        uniqueLogin: req.body.uniqueLogin,
-        password: req.body.password,
-        role: req.body.role,
-        photo: req.body.photo,
-        bio: req.body.bio,
+        email: body.email,
+        name: body.name,
+        uniqueLogin: body.uniqueLogin,
+        password: body.password,
+        role: body.role ?? 'USER',
+        photo: body.photo,
+        bio: body.bio,
         provider: 'LOCAL',
       };
 
       const result = await this.userService.createUser(dto);
+
       if (!result) {
         this.loggerService.warn(
           `User with email ${req.body.email} or unique login ${req.body.uniqueLogin} already exists.`,
         );
         return next(new HTTPError(422, 'User with this email or unique login already exists'));
       }
+
       this.loggerService.info(`User with ID ${result.id} successfully registered.`);
+
       this.ok(res, {
         id: result.id,
         email: result.email,
@@ -146,7 +156,7 @@ export class UserController extends BaseController implements IUserController {
         maxAge: 24 * 60 * 60 * 1000,
       });
       this.loggerService.info(`User with ID ${result!.id} successfully logged in.`);
-      this.ok(res, 'Ales good');
+      this.ok(res, 'All good');
     } catch (error) {
       next(error);
     }
@@ -192,6 +202,7 @@ export class UserController extends BaseController implements IUserController {
         photo: user.photo,
       });
     } catch (err: any) {
+      this.loggerService.error(`Firebase auth error: ${err.message}`);
       next(new HTTPError(401, `Firebase auth error: ${err.message}`));
     }
   }
@@ -225,6 +236,7 @@ export class UserController extends BaseController implements IUserController {
       });
       res.redirect(redirect);
     } catch (err: any) {
+      this.loggerService.error(`Firebase redirect error: ${err.message}`);
       next(new HTTPError(401, `Firebase redirect error: ${err.message}`));
     }
   }
@@ -240,10 +252,10 @@ export class UserController extends BaseController implements IUserController {
   }
 
   async reEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const email = req.body.email;
+    const { email } = req.body as ReEmailDto;
     try {
-      const result = await this.userService.reEmail(email);
-      this.loggerService.info(`An email with a code has been sent to you.`);
+      await this.userService.reEmail(email);
+      this.loggerService.info(`An email with a code has been sent to ${email}.`);
       this.ok(res, 'The code has been sent to you.');
     } catch (error) {
       next(error);
@@ -253,9 +265,10 @@ export class UserController extends BaseController implements IUserController {
   async confirmEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
     const code = req.params.code as string;
     try {
-      const result = await this.userService.confirmEmail(code);
-      this.loggerService.info(`You have successfully confirmed your email.`);
-      return res.redirect('https://fitness-web-frontend.vercel.app/login');
+      await this.userService.confirmEmail(code);
+      const loginUrl = this.configService.get('FRONTEND_LOGIN_URL');
+      this.loggerService.info(`Email confirmation succeeded, redirecting to login page.`);
+      return res.redirect(loginUrl);
     } catch (error) {
       next(error);
     }
@@ -263,12 +276,9 @@ export class UserController extends BaseController implements IUserController {
 
   async email(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const result = await emailAdapter.sendEmail(
-        req.body.email,
-        req.body.subject,
-        req.body.message,
-      );
-      this.loggerService.info(`Everything okay. Email sent`);
+      const body = req.body as EmailRequestDto;
+      const result = await emailAdapter.sendEmail(body.email, body.subject, body.message);
+      this.loggerService.info(`Everything okay. Email sent to ${body.email}`);
       this.ok(res, result);
     } catch (error) {
       next(error);
@@ -286,8 +296,8 @@ export class UserController extends BaseController implements IUserController {
 
   async getUserById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) {
+      const id = this.extractUserId(req.params.id);
+      if (id === null) {
         return next(new HTTPError(400, 'Invalid identifier'));
       }
       const dto = await this.userService.getUserById(id);
@@ -303,7 +313,10 @@ export class UserController extends BaseController implements IUserController {
 
   async deleteUserById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const id = parseInt(req.params.id);
+      const id = this.extractUserId(req.params.id);
+      if (id === null) {
+        return next(new HTTPError(400, 'Invalid identifier'));
+      }
       const result = await this.userService.deleteUserById(id);
       if (!result) {
         this.loggerService.warn(`Failed to delete user with ID ${id}.`);
@@ -358,5 +371,14 @@ export class UserController extends BaseController implements IUserController {
     } catch (error) {
       next(error);
     }
+  }
+
+  private extractUserId(idParam: string): number | null {
+    const id = Number(idParam);
+    if (Number.isNaN(id) || id <= 0) {
+      this.loggerService.warn(`Invalid user identifier received: ${idParam}`);
+      return null;
+    }
+    return id;
   }
 }

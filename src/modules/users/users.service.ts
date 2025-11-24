@@ -14,6 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { add } from 'date-fns/add';
 import { emailAdapter } from '../../utils/mailer';
 import { UserResponseDto } from './dto/user-response.dto';
+import { LoginUserDto } from './dto/login-user.dto';
 
 @injectable()
 export class UserService implements IUserService {
@@ -24,53 +25,55 @@ export class UserService implements IUserService {
     @inject(TYPES.ILogger) private loggerService: ILogger,
   ) {}
 
-  async createUser(dto: UserDto): Promise<UserModel | null> {
+  async createUser(dto: UserDto): Promise<UserModel> {
     const userRole: Role = dto.role === 'ADMIN' ? Role.ADMIN : Role.USER;
     const newUser = new User(
-      dto.email!,
-      dto.name!,
-      dto.uniqueLogin!,
+      dto.email,
+      dto.name,
+      dto.uniqueLogin,
       dto.photo ?? null,
       dto.bio ?? null,
       userRole,
     );
+
     const salt = Number(this.configService.get('SALT'));
     const passwordToHash = dto.password ?? uuidv4();
     await newUser.setPassword(passwordToHash, salt);
 
-    if (
-      (await this.usersRepository.findByEmail(dto.email!)) ||
-      (await this.usersRepository.findByUniqueLogin(dto.uniqueLogin!))
-    ) {
+    const existingByEmail = await this.usersRepository.findByEmail(dto.email);
+    const existingByLogin = await this.usersRepository.findByUniqueLogin(dto.uniqueLogin);
+
+    if (existingByEmail || existingByLogin) {
       this.loggerService.warn(`Attempt to create a user with existing email or unique login.`);
-      return null;
+      throw new HTTPError(409, 'User with this email or unique login already exists');
     }
 
-    const createdUser = await this.usersRepository.create(newUser);
+    try {
+      const createdUser = await this.usersRepository.create(newUser);
 
-    if (dto.provider === 'GOOGLE') {
+      if (dto.provider === 'GOOGLE') {
+        await this.usersRepository.createEmailConfirmation({
+          userId: createdUser.id,
+          confirmationCode: uuidv4(),
+          expirationDate: add(new Date(), { minutes: 15 }),
+          isConfirmed: true,
+        });
+        this.loggerService.info(`User ${createdUser.id} registered via Google—auto-confirmed.`);
+        return createdUser;
+      }
+
+      const confirmationCode = uuidv4();
+      const expirationDate = add(new Date(), { minutes: 15 });
       await this.usersRepository.createEmailConfirmation({
         userId: createdUser.id,
-        confirmationCode: uuidv4(),
-        expirationDate: add(new Date(), { minutes: 15 }),
-        isConfirmed: true,
+        confirmationCode,
+        expirationDate,
+        isConfirmed: false,
       });
-      this.loggerService.info(`User ${createdUser.id} registered via Google—auto-confirmed.`);
-      return createdUser;
-    }
 
-    const confirmationCode = uuidv4();
-    const expirationDate = add(new Date(), { minutes: 15 });
-    await this.usersRepository.createEmailConfirmation({
-      userId: createdUser.id,
-      confirmationCode,
-      expirationDate,
-      isConfirmed: false,
-    });
-
-    const baseUrl = this.configService.get('CONFIRMATION_BASE_URL');
-    const confirmationUrl = `${baseUrl}/users/confirm-email/${confirmationCode}`;
-    const messageEmail = `
+      const baseUrl = this.configService.get('CONFIRMATION_BASE_URL');
+      const confirmationUrl = `${baseUrl}/users/confirm-email/${confirmationCode}`;
+      const messageEmail = `
 <!DOCTYPE html>
 <html lang="en">
   <head><meta charset="UTF-8" /><title>Confirm Email</title></head>
@@ -86,32 +89,38 @@ export class UserService implements IUserService {
   </body>
 </html>
 `;
-    await emailAdapter.sendEmail(createdUser.email, 'Confirm your email', messageEmail);
-    this.loggerService.info(`Confirmation email sent to user ${createdUser.id}`);
-    return createdUser;
+      await emailAdapter.sendEmail(createdUser.email, 'Confirm your email', messageEmail);
+      this.loggerService.info(`Confirmation email sent to user ${createdUser.id}`);
+      return createdUser;
+    } catch (error: any) {
+      this.loggerService.error(
+        `Failed to create user ${dto.email}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+      throw error instanceof HTTPError ? error : new HTTPError(500, 'Unable to create user');
+    }
   }
 
-  async validateUser(dto: UserDto): Promise<UserModel> {
-    const user = await this.usersRepository.findByEmail(dto.email!);
+  async validateUser(dto: LoginUserDto): Promise<UserModel> {
+    const user = await this.usersRepository.findByEmail(dto.email);
     if (!user) {
       this.loggerService.warn(`User with email ${dto.email} not found.`);
       throw new HTTPError(404, 'User not found');
     }
-    if (
-      !(await new User(
-        user.email,
-        user.name,
-        user.uniqueLogin,
-        user.photo,
-        user.bio,
-        user.role,
-        user.password!,
-      ).comparePassword(dto.password!))
-    ) {
+    const isPasswordValid = await new User(
+      user.email,
+      user.name,
+      user.uniqueLogin,
+      user.photo,
+      user.bio,
+      user.role,
+      user.password!,
+    ).comparePassword(dto.password);
+
+    if (!isPasswordValid) {
       this.loggerService.warn(`Invalid password for user ${dto.email}`);
       throw new HTTPError(401, 'Invalid login or password');
     }
-    if (!(await this.usersRepository.findIsConfirmed(dto.email!))) {
+    if (!(await this.usersRepository.findIsConfirmed(dto.email))) {
       this.loggerService.warn('Email not confirmed');
       throw new HTTPError(401, 'You need to confirm your email');
     }

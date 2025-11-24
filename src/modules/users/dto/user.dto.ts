@@ -1,33 +1,10 @@
-import { IsEmail, IsOptional, IsString } from 'class-validator';
-
-export class UserDto {
-  @IsOptional()
-  @IsEmail({}, { message: 'Invalid email' })
-  email?: string;
-
-  @IsOptional()
-  @IsString({ message: 'Invalid password' })
+export interface UserDto {
+  email: string;
   password?: string;
-
-  @IsOptional()
-  @IsString({ message: 'Invalid name' })
-  name?: string;
-
-  @IsOptional()
-  @IsString({ message: 'Invalid unique login' })
-  uniqueLogin?: string;
-
-  @IsOptional()
-  @IsString({ message: 'Invalid role' })
+  name: string;
+  uniqueLogin: string;
   role?: string;
-
-  @IsOptional()
-  @IsString({ message: 'Invalid photo URL' })
-  photo?: string;
-
-  @IsOptional()
-  @IsString({ message: 'Invalid bio' })
-  bio?: string;
-
-  provider!: 'LOCAL' | 'GOOGLE';
+  photo?: string | null;
+  bio?: string | null;
+  provider: 'LOCAL' | 'GOOGLE';
 }
