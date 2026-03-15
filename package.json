@@ -4,7 +4,7 @@
   "description": "internet-shop",
   "main": "index.js",
   "scripts": {
-    "start": "node ./dist/main.js",
+    "start": "node ./dist/src/main.js",
     "dev": "nodemon",
     "dev:inspect": "nodemon -e ts,json --exec node --inspect=localhost:9229 -r ts-node/register src/main.ts",
     "generate": "prisma generate",
