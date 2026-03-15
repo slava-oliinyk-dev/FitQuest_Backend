@@ -69,6 +69,10 @@ export class ExerciseRepository implements IExerciseRepository {
   }
 
   async updateExerciseNote(dto: UpdateExerciseNoteDto): Promise<ExerciseModel> {
+    if (dto.id === undefined || dto.workoutDayId === undefined) {
+      throw new Error('Exercise id and workoutDayId are required to update exercise note');
+    }
+
     return this.prismaService.client.exerciseModel.update({
       where: {
         id_workoutDayId: {

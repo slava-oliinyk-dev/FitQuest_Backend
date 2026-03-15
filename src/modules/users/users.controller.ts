@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { Request, Response, NextFunction } from 'express';
 import { BaseController } from '../../common/base.controller';
-import { IUserController } from './user.controller.interface';
+import { IUserController } from './users.controller.interface';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../types';
 import { ILogger } from '../../log/logger.interface';
