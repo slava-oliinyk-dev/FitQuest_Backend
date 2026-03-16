@@ -11,18 +11,31 @@ const required = (key: string): string => {
   return value;
 };
 
+const toNumber = (value: string | undefined, fallback: number): number => {
+  if (!value) {
+    return fallback;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const toBoolean = (value: string | undefined, fallback: boolean): boolean => {
+  if (!value) {
+    return fallback;
+  }
+  return value.toLowerCase() === 'true';
+};
+
 const mailUser = required('MAIL_USER');
 const mailPassword = required('MAIL_PASSWORD');
 const mailFrom = process.env.MAIL_FROM ?? `"FitQuest" <${mailUser}>`;
 const mailService = process.env.MAIL_SERVICE ?? 'gmail';
 const mailHost = process.env.MAIL_HOST;
-const mailPort = process.env.MAIL_PORT ? Number(process.env.MAIL_PORT) : undefined;
-const secureConnection = process.env.MAIL_SECURE
-  ? process.env.MAIL_SECURE === 'true'
-  : mailPort === 465;
-const connectionTimeout = Number(process.env.MAIL_CONNECTION_TIMEOUT_MS ?? 10_000);
-const greetingTimeout = Number(process.env.MAIL_GREETING_TIMEOUT_MS ?? 10_000);
-const socketTimeout = Number(process.env.MAIL_SOCKET_TIMEOUT_MS ?? 15_000);
+const mailPort = toNumber(process.env.MAIL_PORT, 465);
+const secureConnection = toBoolean(process.env.MAIL_SECURE, mailPort === 465);
+const connectionTimeout = toNumber(process.env.MAIL_CONNECTION_TIMEOUT_MS, 10_000);
+const greetingTimeout = toNumber(process.env.MAIL_GREETING_TIMEOUT_MS, 10_000);
+const socketTimeout = toNumber(process.env.MAIL_SOCKET_TIMEOUT_MS, 15_000);
 
 export const emailAdapter = {
   async sendEmail(email: string, subject: string, message: string) {
@@ -40,7 +53,31 @@ export const emailAdapter = {
       },
     });
 
-    await transport.verify();
+    try {
+      console.info('[Mailer] SMTP config', {
+        host: mailHost ?? `(service:${mailService})`,
+        port: mailPort,
+        secure: secureConnection,
+        user: mailUser,
+        hasPassword: Boolean(mailPassword),
+        passwordLength: mailPassword.length,
+        connectionTimeout,
+        greetingTimeout,
+        socketTimeout,
+      });
+
+      await transport.verify();
+      console.info('[Mailer] SMTP verify success');
+    } catch (error: any) {
+      console.error('[Mailer] SMTP verify failed', {
+        message: error?.message,
+        code: error?.code,
+        command: error?.command,
+        response: error?.response,
+        responseCode: error?.responseCode,
+      });
+      throw error;
+    }
 
     await transport.sendMail({
       from: mailFrom,
