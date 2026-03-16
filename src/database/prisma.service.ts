@@ -17,6 +17,7 @@ export class PrismaService {
       if (e instanceof Error) {
         this.logger.error('[PrismaService] Database connection error ' + e.message);
       }
+         throw e;
     }
   }
   async disconnect(): Promise<void> {
