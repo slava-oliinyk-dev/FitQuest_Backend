@@ -39,10 +39,10 @@ export class PassportConfig {
         try {
           const user = await this.userService.getUserInfo(jwtPayload.email);
           if (user) {
-            return done(null, { id: jwtPayload.id, email: user.email, role: user.role });
-          } else {
-            return done(null, false);
+            return done(null, user);
           }
+
+          return done(null, false);
         } catch (error) {
           return done(error, false);
         }
