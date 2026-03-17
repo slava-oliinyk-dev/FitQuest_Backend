@@ -47,33 +47,38 @@ export class UserService implements IUserService {
       this.loggerService.warn(`Attempt to create a user with existing email or unique login.`);
       throw new HTTPError(409, 'User with this email or unique login already exists');
     }
-
+    let createdUser: UserModel;
     try {
-      const createdUser = await this.usersRepository.create(newUser);
+      createdUser = await this.usersRepository.create(newUser);
+    } catch (error) {
+      this.loggerService.error(
+        `Failed to persist user ${dto.email}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+      throw error instanceof HTTPError ? error : new HTTPError(500, 'Unable to create user');
+    }
 
-      if (dto.provider === 'GOOGLE') {
-        await this.usersRepository.createEmailConfirmation({
-          userId: createdUser.id,
-          confirmationCode: uuidv4(),
-          expirationDate: add(new Date(), { minutes: 15 }),
-          isConfirmed: true,
-        });
-        this.loggerService.info(`User ${createdUser.id} registered via Google—auto-confirmed.`);
-        return createdUser;
-      }
-
-      const confirmationCode = uuidv4();
-      const expirationDate = add(new Date(), { minutes: 15 });
+    if (dto.provider === 'GOOGLE') {
       await this.usersRepository.createEmailConfirmation({
         userId: createdUser.id,
-        confirmationCode,
-        expirationDate,
-        isConfirmed: false,
+        confirmationCode: uuidv4(),
+        expirationDate: add(new Date(), { minutes: 15 }),
+        isConfirmed: true,
       });
+      this.loggerService.info(`User ${createdUser.id} registered via Google—auto-confirmed.`);
+      return createdUser;
+    }
 
-      const baseUrl = this.configService.get('CONFIRMATION_BASE_URL');
-      const confirmationUrl = `${baseUrl}/users/confirm-email/${confirmationCode}`;
-      const messageEmail = `
+    const confirmationCode = uuidv4();
+    const expirationDate = add(new Date(), { minutes: 15 });
+    await this.usersRepository.createEmailConfirmation({
+      userId: createdUser.id,
+      confirmationCode,
+      expirationDate,
+      isConfirmed: false,
+    });
+    const baseUrl = this.configService.get('CONFIRMATION_BASE_URL');
+    const confirmationUrl = `${baseUrl}/users/confirm-email/${confirmationCode}`;
+    const messageEmail = `
 <!DOCTYPE html>
 <html lang="en">
   <head><meta charset="UTF-8" /><title>Confirm Email</title></head>
@@ -89,14 +94,20 @@ export class UserService implements IUserService {
   </body>
 </html>
 `;
+    try {
       await emailAdapter.sendEmail(createdUser.email, 'Confirm your email', messageEmail);
       this.loggerService.info(`Confirmation email sent to user ${createdUser.id}`);
       return createdUser;
-    } catch (error: any) {
+    } catch (error) {
       this.loggerService.error(
-        `Failed to create user ${dto.email}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Failed to send confirmation email for ${dto.email}: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
-      throw error instanceof HTTPError ? error : new HTTPError(500, 'Unable to create user');
+      await this.usersRepository.deleteById(createdUser.id);
+      this.loggerService.warn(`Rolled back user ${createdUser.id} after email send failure.`);
+
+      throw error instanceof HTTPError
+        ? error
+        : new HTTPError(503, 'Unable to send confirmation email. Please try again later.');
     }
   }
 
