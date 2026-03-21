@@ -1,8 +1,9 @@
 # FitQuest_backend
 
-**Demo:** Add demo link here
-**Frontend:** Add frontend app link here
-**Screenshots:** Add screenshots or GIFs here
+**Demo:** [fitquest.fit](https://fitquest.fit/)  
+**Frontend Repository:** [Frontend repo link here](https://github.com/ViacheslavOl/FitQuest_Frontend)  
+**Backend API:** [Railway API](https://fitnesswebbackend-production-9672.up.railway.app/)  
+**API Examples:** [Go to API Examples](#api-examples)
 
 ## Project Overview
 
@@ -278,8 +279,24 @@ I also gained more hands-on experience with Prisma and PostgreSQL, especially wh
 
 Overall, this project helped me feel more confident building a backend that is closer to a real product than a simple training CRUD application.
 
-## Screenshots
+## API Examples
 
-```md
-![App screenshot](./path-to-screenshot.png)
-```
+### Login
+
+![Login](./screenshots/Login.png)
+
+### Create Program
+
+![Create Program](./screenshots/CreateProgram.png)
+
+### Create Day
+
+![Create Day](./screenshots/CreateDay.png)
+
+### Create Exercise
+
+![Create Exercise](./screenshots/CreateExercise.png)
+
+### Change Exercise
+
+![Change Exercise](./screenshots/ChangeExercise.png)
