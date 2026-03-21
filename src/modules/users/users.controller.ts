@@ -156,7 +156,13 @@ export class UserController extends BaseController implements IUserController {
         maxAge: 24 * 60 * 60 * 1000,
       });
       this.loggerService.info(`User with ID ${result!.id} successfully logged in.`);
-      this.ok(res, 'All good');
+      this.ok(res, {
+        message: 'Login successful',
+        user: {
+          id: result!.id,
+          email: result!.email,
+        },
+      });
     } catch (error) {
       next(error);
     }

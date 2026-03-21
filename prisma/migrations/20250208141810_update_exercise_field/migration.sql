@@ -1,4 +1,0 @@
--- AlterTable
-ALTER TABLE "ExerciseModel" ALTER COLUMN "name" DROP NOT NULL,
-ALTER COLUMN "sets" DROP NOT NULL,
-ALTER COLUMN "repetitions" DROP NOT NULL;

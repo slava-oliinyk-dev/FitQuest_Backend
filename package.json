@@ -1,7 +1,7 @@
 {
-  "name": "appapiexpress",
+  "name": "FitQuest",
   "version": "1.0.0",
-  "description": "internet-shop",
+  "description": "fitquest_app",
   "main": "index.js",
   "scripts": {
     "start": "node ./dist/src/main.js",
@@ -20,7 +20,7 @@
   "keywords": [
     "gymApp"
   ],
-  "author": "Viacheslav Oliinyk",
+  "author": "Slava",
   "license": "ISC",
   "dependencies": {
     "@prisma/client": "^5.14.0",
