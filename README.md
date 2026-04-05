@@ -1,7 +1,7 @@
 # FitQuest_backend
 
 **Demo:** [fitquest.fit](https://fitquest.fit/)  
-**Frontend Repository:** [FitQuest Frontend](https://github.com/ViacheslavOl/FitQuest_Frontend)  
+**Frontend Repository:** [FitQuest Frontend](https://github.com/slava-oliinyk-dev/FitQuest_Frontend)  
 **Backend API:** [fitnesswebbackend-production-9672.up.railway.app](https://fitnesswebbackend-production-9672.up.railway.app/)  
 **API Examples:** See the [API Examples](#api-examples) section below.
 
